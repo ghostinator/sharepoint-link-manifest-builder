@@ -46,10 +46,13 @@
     Everything else is escalated to an error in CI via -warnaserror.
   -->
   <PropertyGroup>
+    <!-- CS1591: every public TYPE and every INTERFACE MEMBER carries XML documentation.
+                 Self-describing DTO properties and enum members do not, and failing the
+                 build over them would reward noise comments rather than useful ones. -->
     <!-- CA1848: LoggerMessage source generators are used on hot paths only. -->
     <!-- CA1031: a few top-level handlers must catch broadly to keep the UI alive;
                  each such site logs the exception and never swallows silently. -->
-    <NoWarn>$(NoWarn);CA1848;CA1031</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;CA1848;CA1031</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
