@@ -1,0 +1,174 @@
+## ---------------------------------------------------------------------------
+## Secrets, tokens and tenant-specific material  (NEVER commit)
+## ---------------------------------------------------------------------------
+*.token
+*.tokens
+*.jwt
+tokens.json
+msal_cache*
+msal.cache*
+.msalcache*
+*.msalcache
+secrets.json
+appsettings.Local.json
+appsettings.*.Local.json
+appsettings.Development.json
+appsettings.Production.json
+local.settings.json
+bootstrap.local.json
+tenant.local.json
+tenant-config.json
+*.local.env
+.env
+.env.*
+!.env.example
+## Certificates / signing material
+*.pfx
+*.p12
+*.pem
+*.key
+*.cer
+*.crt
+*.snk
+*.jks
+*.keystore
+*.mobileprovision
+*.provisionprofile
+*.p8
+id_rsa*
+id_ed25519*
+## Cloud / CLI credential leakage
+.azure/
+.gh-token
+gh-token.txt
+
+## ---------------------------------------------------------------------------
+## Application-produced local data (may contain tenant data)
+## ---------------------------------------------------------------------------
+diagnostics/
+diagnostic-bundles/
+*.diagbundle
+*.diagbundle.zip
+job-history.json
+job-reports/
+publication-readiness-report.*
+_sharepoint-links.txt
+_sharepoint-links-master.txt
+_sharepoint-links*.md
+_sharepoint-links*.csv
+_sharepoint-links*.json
+!docs/samples/_sharepoint-links.sample.txt
+!docs/samples/**
+
+## ---------------------------------------------------------------------------
+## .NET build output
+## ---------------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+artifacts/
+publish/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.userprefs
+*.cache
+*.dll
+*.exe
+*.pdb
+*.mdb
+*.dSYM/
+project.lock.json
+project.fragment.lock.json
+.packages/
+packages/
+!**/packages/build/
+*.nupkg
+*.snupkg
+BenchmarkDotNet.Artifacts/
+
+## ---------------------------------------------------------------------------
+## Test artifacts
+## ---------------------------------------------------------------------------
+[Tt]est[Rr]esult*/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+.coverage/
+*.received.*
+!*.verified.*
+
+## ---------------------------------------------------------------------------
+## Crash dumps / debug
+## ---------------------------------------------------------------------------
+*.dmp
+*.mdmp
+*.hdmp
+*.stackdump
+core
+core.*
+crash-*.log
+hs_err_pid*
+
+## ---------------------------------------------------------------------------
+## Logs
+## ---------------------------------------------------------------------------
+logs/
+*.log
+!docs/**/*.log.sample
+
+## ---------------------------------------------------------------------------
+## SBOM / release scratch (generated, not tracked)
+## ---------------------------------------------------------------------------
+sbom/
+*.cdx.json
+*.spdx.json
+checksums.txt
+SHA256SUMS*
+
+## ---------------------------------------------------------------------------
+## IDE / editor local configuration
+## ---------------------------------------------------------------------------
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.sln.iml
+*.swp
+*.swo
+*~
+.fleet/
+.ionide/
+
+## ---------------------------------------------------------------------------
+## Operating system artifacts
+## ---------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Icon?
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+.directory
+.fuse_hidden*
+.nfs*

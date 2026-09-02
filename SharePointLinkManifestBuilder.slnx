@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SharePointLinkManifestBuilder.App/SharePointLinkManifestBuilder.App.csproj" />
+    <Project Path="src/SharePointLinkManifestBuilder.Core/SharePointLinkManifestBuilder.Core.csproj" />
+    <Project Path="src/SharePointLinkManifestBuilder.Graph/SharePointLinkManifestBuilder.Graph.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SharePointLinkManifestBuilder.App.Tests/SharePointLinkManifestBuilder.App.Tests.csproj" />
+    <Project Path="tests/SharePointLinkManifestBuilder.Core.Tests/SharePointLinkManifestBuilder.Core.Tests.csproj" />
+    <Project Path="tests/SharePointLinkManifestBuilder.Graph.Tests/SharePointLinkManifestBuilder.Graph.Tests.csproj" />
+  </Folder>
+</Solution>

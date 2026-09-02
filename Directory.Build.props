@@ -1,0 +1,61 @@
+<Project>
+
+  <!--
+    Repository-wide build settings for SharePoint Link Manifest Builder.
+    Publisher metadata below is intentionally PLACEHOLDER text. A publisher that
+    forks or ships this software replaces these values (see docs/PACKAGING.md).
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+  </PropertyGroup>
+
+  <!-- Semantic version. Release automation overrides Version from the git tag. -->
+  <PropertyGroup>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+  </PropertyGroup>
+
+  <!-- PLACEHOLDER publisher metadata. Replace before public distribution. -->
+  <PropertyGroup>
+    <Product>SharePoint Link Manifest Builder</Product>
+    <Company>PLACEHOLDER-PUBLISHER</Company>
+    <Authors>PLACEHOLDER-PUBLISHER</Authors>
+    <Copyright>Copyright (c) PLACEHOLDER-PUBLISHER</Copyright>
+    <PackageProjectUrl>https://example.invalid/PLACEHOLDER-OWNER/sharepoint-link-manifest-builder</PackageProjectUrl>
+    <RepositoryUrl>https://example.invalid/PLACEHOLDER-OWNER/sharepoint-link-manifest-builder</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <!--
+    Warnings we deliberately do not fail the build on, with reasons.
+    Everything else is escalated to an error in CI via -warnaserror.
+  -->
+  <PropertyGroup>
+    <!-- CA1848: LoggerMessage source generators are used on hot paths only. -->
+    <!-- CA1031: a few top-level handlers must catch broadly to keep the UI alive;
+                 each such site logs the exception and never swallows silently. -->
+    <NoWarn>$(NoWarn);CA1848;CA1031</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+</Project>
