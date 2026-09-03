@@ -82,8 +82,23 @@ jobs:
   dependency-review:
     name: Dependency review
     runs-on: ubuntu-latest
-    # Only meaningful on a pull request, where there is a base to compare against.
-    if: github.event_name == 'pull_request'
+
+    # Two conditions, for two different reasons.
+    #
+    # A pull request is needed because the action compares a head against a base; there is
+    # nothing to diff on a push.
+    #
+    # Public visibility is needed because this action reads the Dependency Graph, and on a
+    # private repository that requires GitHub Advanced Security. Without it the comparison
+    # endpoint returns 404 and the job fails in a few seconds for a billing reason rather than
+    # because a dependency is actually vulnerable -- the same situation as the CodeQL job below,
+    # and gated the same way in preference to continue-on-error, which would also hide a genuine
+    # vulnerability finding.
+    #
+    # Dependency scanning is NOT lost while private: the "Dependency audit and SBOM" job above
+    # runs `dotnet list package --vulnerable` on every push and pull request, and that has no
+    # Advanced Security requirement.
+    if: github.event_name == 'pull_request' && github.event.repository.visibility == 'public'
     permissions:
       contents: read
       pull-requests: write
