@@ -4,9 +4,13 @@ namespace SharePointLinkManifestBuilder.Core.Tests.Security;
 
 public class SensitiveDataRedactorTests
 {
-    /// <summary>A synthetic, structurally-valid JWT. Not a real token.</summary>
+    /// <summary>
+    /// A structurally-valid but entirely synthetic JWT: the payload decodes to {"sub":"test"}
+    /// and the signature is the literal text "signature-placeholder". It is not a credential
+    /// and grants nothing.
+    /// </summary>
     private const string FakeJwt =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0In0.c2lnbmF0dXJlLXBsYWNlaG9sZGVy";
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0In0.c2lnbmF0dXJlLXBsYWNlaG9sZGVy"; // SCAN-ALLOW: synthetic
 
     [Fact]
     public void Redact_BearerToken_IsRemoved()

@@ -1,0 +1,106 @@
+name: Bug report
+description: Something does not work as described.
+labels: [bug, needs-triage]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Before you post
+
+        **Do not include any of the following.** This is a public issue tracker.
+
+        - Access tokens, refresh tokens, authorization codes, client secrets or certificates
+        - Sharing links produced by the application
+        - Real SharePoint or OneDrive URLs
+        - Email addresses or user principal names
+        - Your tenant ID or client ID
+        - Job manifests or diagnostic bundles that have not been reviewed
+
+        Replace anything identifying with `contoso.sharepoint.com`, `user@contoso.com` and
+        similar. The Diagnostics page can export a sanitized bundle: check what it contains
+        before attaching it.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did the application do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Press ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Application version
+      description: Shown on the About page.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Operating system
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you installed it
+      options:
+        - Downloaded a release artifact
+        - Built from source
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: registration
+    attributes:
+      label: How the app registration was set up
+      options:
+        - Automatic tenant setup
+        - Existing app registration
+        - Not connected yet
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message and correlation ID
+      description: >
+        The application shows a correlation ID with Graph failures. Include it; it lets a
+        maintainer or Microsoft support trace the exact request. Redact everything else.
+      render: text
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I have removed all tokens, secrets, sharing links, tenant identifiers and personal data
+          required: true
+        - label: I can reproduce this on the latest version
+          required: false

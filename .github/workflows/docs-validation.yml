@@ -1,0 +1,89 @@
+name: Documentation validation
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Check that every required document exists
+        run: |
+          set -euo pipefail
+          missing=0
+          required=(
+            README.md PLAN.md CHANGELOG.md SECURITY.md CONTRIBUTING.md
+            CODE_OF_CONDUCT.md THIRD-PARTY-NOTICES.md LICENSE-SELECTION.md
+            docs/ARCHITECTURE.md docs/ENTRA-SETUP.md docs/USER-GUIDE.md
+            docs/ADMIN-GUIDE.md docs/GRAPH-OPERATIONS.md docs/THREAT-MODEL.md
+            docs/TROUBLESHOOTING.md docs/PACKAGING.md docs/GITHUB-PUBLISHING.md
+            docs/PRIVACY.md docs/DATA-FLOW.md docs/RELEASE-PROCESS.md
+            docs/ROLLBACK.md docs/SUPPORT.md docs/DIAGNOSTICS.md docs/ACCEPTANCE.md
+          )
+          for f in "${required[@]}"; do
+            if [[ ! -f "$f" ]]; then
+              echo "::error file=$f::Required document is missing"
+              missing=$((missing + 1))
+            fi
+          done
+          [[ -d docs/adr ]] || { echo "::error::docs/adr is missing"; missing=$((missing + 1)); }
+          exit $missing
+
+      - name: Check internal links resolve
+        run: |
+          set -uo pipefail
+          broken=0
+          while IFS= read -r file; do
+            # Relative markdown links only; external URLs are not fetched by CI.
+            while IFS= read -r target; do
+              [[ -z "$target" ]] && continue
+              case "$target" in http*|mailto:*|'#'*) continue ;; esac
+              clean="${target%%#*}"
+              [[ -z "$clean" ]] && continue
+              resolved="$(dirname "$file")/$clean"
+              if [[ ! -e "$resolved" ]]; then
+                echo "::error file=$file::Broken internal link: $target"
+                broken=$((broken + 1))
+              fi
+            done < <(grep -oE '\]\([^)]+\)' "$file" | sed -E 's/^\]\(//; s/\)$//')
+          done < <(find . -name '*.md' -not -path './artifacts/*' -not -path './.git/*')
+          exit $broken
+
+      - name: Check the sample configuration contains no private values
+        run: |
+          set -euo pipefail
+          for f in docs/samples/*; do
+            [[ -f "$f" ]] || continue
+            if grep -qiE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' "$f" \
+               && ! grep -qiE '00000000-0000|11111111-1111|EXAMPLE|PLACEHOLDER' "$f"; then
+              echo "::error file=$f::Sample contains what looks like a real GUID"
+              exit 1
+            fi
+            if grep -qiE 'https://[a-z0-9-]+\.sharepoint\.com' "$f" \
+               && ! grep -qiE 'contoso|example|PLACEHOLDER' "$f"; then
+              echo "::error file=$f::Sample contains what looks like a real tenant URL"
+              exit 1
+            fi
+          done
+          echo "Samples use synthetic values only."
+
+      - name: Check that no core TODO placeholders remain
+        run: |
+          set -uo pipefail
+          # A TODO in shipped source is a promise nobody tracked. Tests and docs may discuss
+          # them; source may not contain them.
+          if grep -rnE '\b(TODO|FIXME|HACK|XXX)\b' src/ --include='*.cs' --include='*.axaml'; then
+            echo "::error::Placeholder markers found in source."
+            exit 1
+          fi
+          echo "No placeholder markers in source."

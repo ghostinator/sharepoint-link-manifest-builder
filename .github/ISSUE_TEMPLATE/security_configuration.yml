@@ -1,0 +1,72 @@
+name: Security configuration question
+description: A question about permissions, consent, or tenant configuration. NOT for vulnerabilities.
+labels: [security-config, needs-triage]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Stop if this is a vulnerability
+
+        **Do not report a security vulnerability here.** This tracker is public, and posting a
+        vulnerability publicly puts every user at risk before a fix exists. See `SECURITY.md`
+        for the private reporting process.
+
+        ## Never post any of these
+
+        - Access tokens, refresh tokens, authorization codes
+        - Client secrets, certificates or private keys
+        - Sharing links produced by this or any application
+        - Real SharePoint or OneDrive URLs
+        - Email addresses or user principal names
+        - Your tenant ID or client ID
+        - Tenant configuration exports, audit logs or unreviewed diagnostic bundles
+
+        Use `contoso.sharepoint.com`, `00000000-0000-0000-0000-000000000000` and
+        `user@contoso.com` instead. If you have already posted something sensitive, delete the
+        comment and treat the exposed value as compromised: revoke and rotate it. Deleting a
+        comment does not un-disclose it.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: Describe the configuration you are trying to achieve.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      options:
+        - Which permissions are required and why
+        - Administrator consent
+        - Automatic versus existing app registration
+        - Sites.Selected and selected-resource scopes
+        - Conditional Access or multi-factor authentication
+        - Tenant sharing policy and blocked links
+        - Least privilege and reducing the permission set
+        - Removing the application from a tenant
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: What the application reported
+      description: Copy the message and correlation ID only. Redact everything identifying.
+      render: text
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: This is NOT a security vulnerability report
+          required: true
+        - label: >
+            I have removed all tokens, secrets, sharing links, tenant identifiers, URLs and
+            personal data from this issue
+          required: true

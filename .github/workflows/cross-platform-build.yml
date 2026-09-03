@@ -1,0 +1,52 @@
+name: Cross-platform build
+
+# Produces self-contained artifacts for every supported runtime identifier.
+# Artifacts from this workflow are UNSIGNED. See docs/PACKAGING.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Cross-compiling a self-contained build is supported, but each artifact is produced
+          # on its own platform family so the native assets are the real ones.
+          - { rid: win-x64,     os: windows-latest }
+          - { rid: win-arm64,   os: windows-latest }
+          - { rid: osx-x64,     os: macos-latest }
+          - { rid: osx-arm64,   os: macos-latest }
+          - { rid: linux-x64,   os: ubuntu-latest }
+          - { rid: linux-arm64, os: ubuntu-latest }
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Publish
+        shell: bash
+        run: ./scripts/publish.sh ${{ matrix.rid }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: SharePointLinkManifestBuilder-${{ matrix.rid }}
+          path: artifacts/publish/${{ matrix.rid }}/
+          retention-days: 14
+          if-no-files-found: error
