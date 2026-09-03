@@ -33,6 +33,9 @@
     <PackageReference Include="Microsoft.Extensions.Options" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../SharePointLinkManifestBuilder.Core/SharePointLinkManifestBuilder.Core.csproj" />
     <ProjectReference Include="../SharePointLinkManifestBuilder.Graph/SharePointLinkManifestBuilder.Graph.csproj" />
   </ItemGroup>
