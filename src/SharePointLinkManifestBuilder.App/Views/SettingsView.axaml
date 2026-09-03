@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+             x:Class="SharePointLinkManifestBuilder.App.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+  <ScrollViewer>
+    <StackPanel Margin="24" Spacing="8" MaxWidth="900" HorizontalAlignment="Left">
+
+      <TextBlock Text="Settings" Classes="PageTitle" />
+
+      <TextBlock Text="{Binding StatusMessage}" Classes="Subtle"
+                 IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 AutomationProperties.LiveSetting="Polite" />
+
+      <TextBlock Text="Appearance" Classes="SectionTitle" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Theme" VerticalAlignment="Center" Width="180" />
+        <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding Theme}" MinWidth="200"
+                  AutomationProperties.Name="Theme" />
+      </StackPanel>
+      <CheckBox Content="Respect the system 'reduce motion' preference" IsChecked="{Binding ReduceMotion}" />
+
+      <TextBlock Text="Microsoft 365 connection" Classes="SectionTitle" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="Configure tenant"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                CommandParameter="setup" />
+        <Button Content="Permissions"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                CommandParameter="permissions" />
+      </StackPanel>
+
+      <TextBlock Text="Sign-in storage" Classes="SectionTitle" />
+      <Border Classes="Card">
+        <StackPanel Spacing="4">
+          <TextBlock Text="{Binding SecureStorageStatus}" />
+          <TextBlock Text="{Binding SecureStorageDetail}" Classes="Body"
+                     IsVisible="{Binding SecureStorageDetail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <TextBlock Classes="Subtle" FontSize="11"
+                     Text="Sign-in details are held by the operating system's secure store. They are never written to the settings file, and never written to disk unprotected." />
+        </StackPanel>
+      </Border>
+
+      <TextBlock Text="Job defaults" Classes="SectionTitle" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Maximum concurrency" VerticalAlignment="Center" Width="180" />
+        <NumericUpDown Value="{Binding DefaultMaxConcurrency}" Minimum="1" Maximum="32" Width="140"
+                       AutomationProperties.Name="Default maximum concurrency" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Delay between requests" VerticalAlignment="Center" Width="180" />
+        <NumericUpDown Value="{Binding DefaultRequestDelayMilliseconds}" Minimum="0" Maximum="60000" Width="140"
+                       AutomationProperties.Name="Default request delay in milliseconds" />
+        <TextBlock Text="ms" VerticalAlignment="Center" Classes="Subtle" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Retry attempts" VerticalAlignment="Center" Width="180" />
+        <NumericUpDown Value="{Binding DefaultMaxRetryAttempts}" Minimum="0" Maximum="10" Width="140"
+                       AutomationProperties.Name="Default retry attempts" />
+      </StackPanel>
+
+      <TextBlock Text="Local data" Classes="SectionTitle" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Job history entries to keep" VerticalAlignment="Center" Width="180" />
+        <NumericUpDown Value="{Binding HistoryRetentionCount}" Minimum="0" Maximum="10000" Width="140"
+                       AutomationProperties.Name="Job history retention count" />
+        <TextBlock Text="0 means unlimited" VerticalAlignment="Center" Classes="Subtle" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Log level" VerticalAlignment="Center" Width="180" />
+        <ComboBox ItemsSource="{Binding LogLevels}" SelectedItem="{Binding LogLevel}" MinWidth="200"
+                  AutomationProperties.Name="Log level" />
+      </StackPanel>
+
+      <ItemsControl ItemsSource="{Binding StorageLocations}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Margin="0,4,0,0">
+              <TextBlock Text="{Binding Description}" />
+              <TextBlock Text="{Binding Path}" Classes="Mono" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <WrapPanel Margin="0,8,0,0">
+        <Button Content="Open data folder" Margin="0,0,8,8" Command="{Binding OpenDataFolderCommand}" />
+        <Button Content="Forget account" Margin="0,0,8,8" Command="{Binding ForgetAccountCommand}" />
+        <Button Content="Clear token cache" Margin="0,0,8,8" Command="{Binding ClearTokenCacheCommand}" />
+        <Button Content="Clear cached data" Margin="0,0,8,8" Command="{Binding ClearCachedDataCommand}" />
+        <Button Content="Remove tenant configuration" Margin="0,0,8,8"
+                Command="{Binding RemoveTenantConfigurationCommand}" />
+      </WrapPanel>
+
+      <TextBlock Text="Privacy" Classes="SectionTitle" />
+      <Border Classes="Card">
+        <StackPanel Spacing="6">
+          <CheckBox Content="Enable telemetry" IsChecked="{Binding TelemetryEnabled}" />
+          <TextBlock Classes="Subtle" FontSize="11"
+                     Text="Off by default. No telemetry pipeline is implemented in this build, so nothing is transmitted even when this is enabled." />
+          <ItemsControl ItemsSource="{Binding PrivacyPoints}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding}" Classes="Body" Margin="0,0,0,6" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <Button Content="Save settings" Classes="Primary" Command="{Binding SaveCommand}"
+              HorizontalAlignment="Left" Margin="0,8,0,0" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

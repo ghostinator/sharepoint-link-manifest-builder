@@ -1,0 +1,198 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+             xmlns:models="using:SharePointLinkManifestBuilder.Core.Models"
+             x:Class="SharePointLinkManifestBuilder.App.Views.PermissionsView"
+             x:DataType="vm:PermissionsViewModel">
+
+  <ScrollViewer>
+    <StackPanel Margin="24" Spacing="8" MaxWidth="1000" HorizontalAlignment="Left">
+
+      <TextBlock Text="Permissions" Classes="PageTitle" />
+      <TextBlock Classes="Subtle"
+                 Text="Settings, Microsoft 365 Connection, Permissions. Granted permissions are confirmed by a real token, not by what is configured." />
+
+      <Border Classes="Danger" IsVisible="{Binding HasError}">
+        <TextBlock Text="{Binding ErrorMessage}" Classes="Body"
+                   AutomationProperties.LiveSetting="Assertive" />
+      </Border>
+
+      <TextBlock Text="{Binding StatusMessage}" Classes="Subtle"
+                 IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 AutomationProperties.LiveSetting="Polite" />
+
+      <Border Classes="Card">
+        <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+          <TextBlock Grid.Row="0" Grid.Column="0" Text="Tenant" Classes="Subtle" />
+          <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding TenantDisplay}" />
+
+          <TextBlock Grid.Row="1" Grid.Column="0" Text="Tenant ID" Classes="Subtle" />
+          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Tenant.TenantId}" Classes="Mono" />
+
+          <TextBlock Grid.Row="2" Grid.Column="0" Text="Account" Classes="Subtle" />
+          <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding AccountDisplay}" />
+
+          <TextBlock Grid.Row="3" Grid.Column="0" Text="Application" Classes="Subtle" />
+          <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Tenant.ApplicationDisplayName}" />
+
+          <TextBlock Grid.Row="4" Grid.Column="0" Text="Client ID" Classes="Subtle" />
+          <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ClientIdDisplay}" Classes="Mono" />
+
+          <TextBlock Grid.Row="5" Grid.Column="0" Text="Registration source" Classes="Subtle" />
+          <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding RegistrationSourceDisplay}" />
+
+          <TextBlock Grid.Row="6" Grid.Column="0" Text="Consent" Classes="Subtle" />
+          <TextBlock Grid.Row="6" Grid.Column="1">
+            <TextBlock.Text>
+              <MultiBinding StringFormat="{}{0} ({1})">
+                <Binding Path="ConsentStateDisplay" />
+                <Binding Path="ConsentTypeDisplay" />
+              </MultiBinding>
+            </TextBlock.Text>
+          </TextBlock>
+
+          <TextBlock Grid.Row="7" Grid.Column="0" Text="Last verified" Classes="Subtle" />
+          <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding LastVerifiedDisplay}" />
+        </Grid>
+      </Border>
+
+      <Border Classes="Card">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Microsoft Graph connectivity" Classes="SectionTitle" Margin="0" />
+          <TextBlock Text="{Binding GraphConnectivity}" />
+        </StackPanel>
+      </Border>
+
+      <Border Classes="Warning" IsVisible="{Binding HasMissingScopes}">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Warning: required permissions are missing" FontWeight="SemiBold" />
+          <ItemsControl ItemsSource="{Binding MissingScopes}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding}" Classes="Mono" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <TextBlock Text="Permissions" Classes="SectionTitle" />
+      <ItemsControl ItemsSource="{Binding Permissions}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="models:PermissionGrantState">
+            <Border Classes="Card" Padding="12" Margin="0,0,0,8">
+              <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="{Binding Requirement.Scope}"
+                             FontWeight="SemiBold" Classes="Mono" />
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding Requirement.Type}" Classes="Subtle" />
+                    <!-- Text, not just colour: "Granted" / "Not granted" is the signal. -->
+                    <TextBlock Text="Granted" Foreground="SeaGreen" FontWeight="SemiBold"
+                               IsVisible="{Binding IsGranted}" />
+                    <TextBlock Text="Not granted" Foreground="IndianRed" FontWeight="SemiBold"
+                               IsVisible="{Binding !IsGranted}" />
+                  </StackPanel>
+                </Grid>
+                <TextBlock Text="{Binding Requirement.Purpose}" Classes="Body" />
+                <TextBlock Text="{Binding Requirement.DataAccessImpact}" Classes="Subtle" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding GrantSource}" Classes="Subtle" FontSize="11" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Border Classes="Notice" IsVisible="{Binding NotVerified.Count}">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Not checked" FontWeight="SemiBold" />
+          <ItemsControl ItemsSource="{Binding NotVerified}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding}" Classes="Body" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <TextBlock Text="Actions" Classes="SectionTitle" />
+      <WrapPanel>
+        <Button Content="Check again" Classes="Primary" Margin="0,0,8,8" Command="{Binding CheckAgainCommand}" />
+        <Button Content="Reauthorize" Margin="0,0,8,8" Command="{Binding ReauthorizeCommand}" />
+        <Button Content="Request missing consent" Margin="0,0,8,8" Command="{Binding RequestMissingConsentCommand}" />
+        <Button Content="Open App Registration" Margin="0,0,8,8" Command="{Binding OpenAppRegistrationCommand}" />
+        <Button Content="Open Enterprise Application" Margin="0,0,8,8" Command="{Binding OpenEnterpriseApplicationCommand}" />
+        <Button Content="Copy Client ID" Margin="0,0,8,8" Command="{Binding CopyClientIdCommand}" />
+        <Button Content="Export sanitized summary" Margin="0,0,8,8" Command="{Binding ExportSanitizedSummaryCommand}" />
+        <Button Content="Repair registration" Margin="0,0,8,8" Command="{Binding RepairRegistrationCommand}" />
+        <Button Content="Remove local configuration" Margin="0,0,8,8" Command="{Binding RemoveLocalConfigurationCommand}" />
+      </WrapPanel>
+
+      <TextBlock Text="Local audit history" Classes="SectionTitle" />
+      <TextBlock Classes="Subtle"
+                 Text="Every change this application made to your Microsoft Entra tenant, recorded on this machine." />
+      <TextBlock Classes="Subtle" Text="No tenant changes have been made from this machine."
+                 IsVisible="{Binding !AuditEntries.Count}" />
+      <ItemsControl ItemsSource="{Binding AuditEntries}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="models:RegistrationAuditEntry">
+            <Border Classes="Card" Padding="10" Margin="0,0,0,6">
+              <StackPanel Spacing="2">
+                <TextBlock FontWeight="SemiBold">
+                  <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0} - {1} - {2}">
+                      <Binding Path="TimestampUtc" />
+                      <Binding Path="Action" />
+                      <Binding Path="Succeeded" />
+                    </MultiBinding>
+                  </TextBlock.Text>
+                </TextBlock>
+                <ItemsControl ItemsSource="{Binding Changes}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <TextBlock Text="{Binding}" Classes="Subtle" FontSize="11" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding FailureReason}" Foreground="IndianRed" FontSize="11"
+                           IsVisible="{Binding FailureReason, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- Guarded destructive action, collapsed by default. -->
+      <Expander Header="Delete the application registration" IsExpanded="{Binding ShowDangerZone}"
+                Margin="0,16,0,0">
+        <StackPanel Spacing="8" Margin="0,8">
+          <Border Classes="Danger">
+            <StackPanel Spacing="4">
+              <TextBlock Text="This is destructive and affects your whole organization" FontWeight="SemiBold" />
+              <TextBlock Classes="Body"
+                         Text="Deleting the registration removes it from Microsoft Entra for everyone. Other installations of this application that use the same registration will stop working. Uninstalling this application never deletes the registration." />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="Notice" IsVisible="{Binding !CanOfferDeletion}">
+            <TextBlock Text="{Binding DeletionNotOfferedReason}" Classes="Body" />
+          </Border>
+
+          <StackPanel Spacing="6" IsVisible="{Binding CanOfferDeletion}">
+            <TextBlock Classes="Body"
+                       Text="To confirm, type the application's display name exactly as shown above." />
+            <TextBox Text="{Binding DeleteConfirmationText}"
+                     Watermark="Application display name"
+                     AutomationProperties.Name="Type the application display name to confirm deletion" />
+            <Button Content="Delete registration permanently" Classes="Destructive"
+                    IsEnabled="{Binding IsDeleteConfirmed}"
+                    Command="{Binding DeleteRegistrationCommand}"
+                    HorizontalAlignment="Left" />
+          </StackPanel>
+        </StackPanel>
+      </Expander>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

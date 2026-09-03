@@ -1,0 +1,352 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+             xmlns:models="using:SharePointLinkManifestBuilder.Core.Models"
+             xmlns:conv="using:SharePointLinkManifestBuilder.App.Converters"
+             x:Class="SharePointLinkManifestBuilder.App.Views.TenantSetupView"
+             x:DataType="vm:TenantSetupViewModel">
+
+  <DockPanel Margin="24">
+
+    <StackPanel DockPanel.Dock="Top" Spacing="4">
+      <TextBlock Text="{Binding PageTitle}" Classes="PageTitle" />
+      <TextBlock Text="{Binding StepIndicator}" Classes="Subtle" />
+
+      <Border Classes="Danger" IsVisible="{Binding HasError}" Margin="0,8,0,0">
+        <TextBlock Text="{Binding ErrorMessage}" Classes="Body"
+                   AutomationProperties.LiveSetting="Assertive" />
+      </Border>
+
+      <TextBlock Text="{Binding StatusMessage}" Classes="Subtle" Margin="0,4,0,0"
+                 IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 AutomationProperties.LiveSetting="Polite" />
+    </StackPanel>
+
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,16,0,0">
+      <Button Content="Back" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}" />
+      <Button Content="Next" Classes="Primary" Command="{Binding NextCommand}"
+              IsVisible="{Binding !IsOnLastPage}" />
+      <Button Content="Continue to resource selection" Classes="Primary"
+              IsVisible="{Binding IsOnLastPage}"
+              Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+              CommandParameter="sharepoint" />
+      <ProgressBar IsIndeterminate="True" Width="120" IsVisible="{Binding IsBusy}"
+                   AutomationProperties.Name="Working" />
+    </StackPanel>
+
+    <ScrollViewer>
+      <StackPanel MaxWidth="880" HorizontalAlignment="Left" Margin="0,16,0,0" Spacing="8">
+
+        <!-- ===== PAGE 1: WELCOME ===== -->
+        <StackPanel Spacing="8"
+                    IsVisible="{Binding CurrentPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Welcome}">
+          <ItemsControl ItemsSource="{Binding WelcomePoints}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding}" Classes="Body" Margin="0,0,0,8" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Text="Where this application stores data on your computer" Classes="SectionTitle" />
+          <ItemsControl ItemsSource="{Binding StorageLocations}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Margin="0,0,0,6">
+                  <TextBlock Text="{Binding Description}" />
+                  <TextBlock Text="{Binding Path}" Classes="Mono" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- ===== PAGE 2: CHOOSE METHOD ===== -->
+        <StackPanel Spacing="12"
+                    IsVisible="{Binding CurrentPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=ChooseMethod}">
+
+          <Border Classes="Card">
+            <StackPanel Spacing="6">
+              <RadioButton GroupName="method" Content="Automatic tenant setup"
+                           IsEnabled="{Binding IsAutomaticSetupAvailable}"
+                           IsChecked="{Binding Method, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Automatic}" />
+              <TextBlock Classes="Body" Margin="26,0,0,0"
+                         Text="This application creates an app registration in your Microsoft Entra tenant for you. It needs an authorized account and a publisher-supplied bootstrap identity." />
+              <Border Classes="Warning" Margin="26,6,0,0" IsVisible="{Binding !IsAutomaticSetupAvailable}">
+                <TextBlock Text="{Binding AutomaticSetupUnavailableReason}" Classes="Body" />
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="Card">
+            <StackPanel Spacing="6">
+              <RadioButton GroupName="method" Content="Use an existing app registration"
+                           IsChecked="{Binding Method, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=ExistingRegistration}" />
+              <TextBlock Classes="Body" Margin="26,0,0,0"
+                         Text="Supply an Application (client) ID your organization already controls. Always available, and the right choice where self-service app registration is prohibited." />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="Card">
+            <StackPanel Spacing="6">
+              <RadioButton GroupName="method" Content="View manual administrator instructions"
+                           IsChecked="{Binding Method, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=ManualInstructions}" />
+              <StackPanel Margin="26,4,0,0" Spacing="4"
+                          IsVisible="{Binding Method, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=ManualInstructions}">
+                <TextBlock Classes="Body" Text="In the Microsoft Entra admin center:" />
+                <TextBlock Classes="Body" Text="1. App registrations, then New registration." />
+                <TextBlock Classes="Body" Text="2. Supported account types: this organizational directory only." />
+                <TextBlock Classes="Body" Text="3. Redirect URI: Public client/native (mobile and desktop), http://localhost" />
+                <TextBlock Classes="Body" Text="4. Register, then confirm Allow public client flows is Yes." />
+                <TextBlock Classes="Body" Text="5. API permissions, Microsoft Graph, Delegated: User.Read, Sites.Read.All, Files.ReadWrite.All (optionally User.ReadBasic.All)." />
+                <TextBlock Classes="Body" Text="6. Grant admin consent for the organization." />
+                <TextBlock Classes="Body" Text="7. Do NOT create a client secret. This application does not use one." />
+                <TextBlock Classes="Body" Text="8. Copy the Application (client) ID and Directory (tenant) ID, then choose 'Use an existing app registration'." />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- ===== PAGE 3: SIGN IN ===== -->
+        <StackPanel Spacing="8"
+                    IsVisible="{Binding CurrentPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=SignIn}">
+          <TextBlock Classes="Body"
+                     Text="Sign-in opens in your normal web browser so multi-factor authentication and Conditional Access work exactly as your organization configured them. This application never sees your password." />
+
+          <TextBlock Text="Directory (tenant) ID" Classes="SectionTitle" />
+          <TextBox Text="{Binding TenantId}" Watermark="00000000-0000-0000-0000-000000000000"
+                   AutomationProperties.Name="Directory tenant ID" />
+
+          <StackPanel Spacing="4"
+                      IsVisible="{Binding Method, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=ExistingRegistration}">
+            <TextBlock Text="Application (client) ID" Classes="SectionTitle" />
+            <TextBox Text="{Binding ExistingClientId}" Watermark="00000000-0000-0000-0000-000000000000"
+                     AutomationProperties.Name="Application client ID" />
+          </StackPanel>
+
+          <Expander Header="Advanced: bootstrap client ID"
+                    IsVisible="{Binding Method, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Automatic}">
+            <StackPanel Spacing="6" Margin="0,8">
+              <TextBlock Classes="Body"
+                         Text="Automatic setup uses a publisher-owned multitenant application to create the registration. If your publisher supplied a bootstrap client ID, enter it here." />
+              <TextBox Text="{Binding BootstrapClientIdOverride}"
+                       Watermark="Bootstrap client ID"
+                       AutomationProperties.Name="Bootstrap client ID" />
+            </StackPanel>
+          </Expander>
+
+          <Button Content="Sign in with Microsoft" Classes="Primary"
+                  Command="{Binding SignInCommand}" HorizontalAlignment="Left" />
+
+          <Border Classes="Notice"
+                  IsVisible="{Binding SignedInAccount, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <StackPanel Spacing="2">
+              <TextBlock Text="Signed in" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding SignedInAccount.UserPrincipalName}" />
+              <TextBlock Text="{Binding SignedInAccount.TenantId, StringFormat='Tenant: {0}'}" Classes="Subtle" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- ===== PAGE 4: PERMISSION REVIEW ===== -->
+        <StackPanel Spacing="8"
+                    IsVisible="{Binding CurrentPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=PermissionReview}">
+          <TextBlock Classes="Body"
+                     Text="These are the exact permissions that will be requested. Nothing wider is requested for convenience, and each one is explained below." />
+
+          <StackPanel Orientation="Horizontal" Spacing="16">
+            <CheckBox Content="Read-only (no link creation)" IsChecked="{Binding ReadOnlyMode}" />
+            <CheckBox Content="Enable the User OneDrive people picker" IsChecked="{Binding IncludeUserPicker}" />
+            <CheckBox Content="Add broad SharePoint write" IsChecked="{Binding IncludeBroadSharePointWrite}" />
+          </StackPanel>
+
+          <ItemsControl ItemsSource="{Binding RequestedPermissions}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="models:PermissionRequirement">
+                <Border Classes="Card" Padding="12" Margin="0,0,0,8">
+                  <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Grid.Column="0" Text="{Binding Scope}" FontWeight="SemiBold" Classes="Mono" />
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding Type}" Classes="Subtle" />
+                        <TextBlock Text="Admin consent expected" Classes="Subtle"
+                                   IsVisible="{Binding AdminConsentExpected}" />
+                        <TextBlock Text="Optional" Classes="Subtle" IsVisible="{Binding IsOptional}" />
+                      </StackPanel>
+                    </Grid>
+                    <TextBlock Text="{Binding Purpose}" Classes="Body" />
+                    <TextBlock Text="{Binding DataAccessImpact}" Classes="Subtle" TextWrapping="Wrap" />
+                    <Border Classes="Warning" IsVisible="{Binding RequiresWarning}" Margin="0,4,0,0">
+                      <TextBlock Classes="Body"
+                                 Text="Warning: this is a broad permission. Enable it only if a narrower one has actually failed." />
+                    </Border>
+                    <TextBlock Classes="Subtle" TextWrapping="Wrap"
+                               Text="{Binding LeastPrivilegeAlternative, StringFormat='Narrower alternative: {0}'}"
+                               IsVisible="{Binding LeastPrivilegeAlternative, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <Border Classes="Notice">
+            <StackPanel Spacing="4">
+              <TextBlock Text="What administrator consent does not do" FontWeight="SemiBold" />
+              <TextBlock Classes="Body"
+                         Text="Granting these permissions does not give this application access to anything you cannot already open. It does not override SharePoint or OneDrive item permissions, external sharing policy, sensitivity labels or Conditional Access, and it does not enable unattended access. This application has no application-only mode." />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- ===== PAGE 5: PROVISIONING ===== -->
+        <StackPanel Spacing="8"
+                    IsVisible="{Binding CurrentPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Provisioning}">
+          <TextBlock Classes="Body"
+                     Text="Review the exact changes below. Nothing is sent to Microsoft Entra until you press Create registration." />
+
+          <TextBlock Text="Application display name" Classes="SectionTitle" />
+          <TextBox Text="{Binding ProposedApplicationName}"
+                   AutomationProperties.Name="Application display name" />
+
+          <TextBlock Text="Changes that will be made to your tenant" Classes="SectionTitle" />
+          <Border Classes="Card">
+            <ItemsControl ItemsSource="{Binding PlannedChanges}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Text="{Binding}" Classes="Body" Margin="0,2" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+
+          <Button Content="Create registration" Classes="Primary"
+                  Command="{Binding CreateRegistrationCommand}" HorizontalAlignment="Left" />
+
+          <TextBlock Classes="Subtle" TextWrapping="Wrap"
+                     Text="Every change is recorded in a local audit history you can review on the Permissions page." />
+        </StackPanel>
+
+        <!-- ===== PAGE 6: CONSENT ===== -->
+        <StackPanel Spacing="8"
+                    IsVisible="{Binding CurrentPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Consent}">
+          <TextBlock Classes="Body"
+                     Text="Consent happens in Microsoft's own experience, in your web browser. This application never shows a sign-in or consent screen of its own and never asks for credentials." />
+
+          <Border Classes="Card">
+            <StackPanel Spacing="4">
+              <TextBlock Text="What an administrator will be asked to approve" Classes="SectionTitle" Margin="0" />
+              <TextBlock Text="{Binding Product.ProductName, StringFormat='Application: {0}'}" />
+              <TextBlock Text="{Binding Product.Publisher, StringFormat='Publisher: {0}'}" />
+              <TextBlock Text="{Binding TenantId, StringFormat='Tenant: {0}'}" />
+              <TextBlock Text="{Binding Product.PrivacyPolicyUrl, StringFormat='Privacy policy: {0}'}" Classes="Subtle" />
+              <TextBlock Text="{Binding Product.SupportUrl, StringFormat='Support: {0}'}" Classes="Subtle" />
+            </StackPanel>
+          </Border>
+
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Continue to Microsoft admin consent" Classes="Primary"
+                    Command="{Binding RequestConsentCommand}" />
+            <Button Content="Copy consent link" Command="{Binding CopyConsentLinkCommand}" />
+            <Button Content="Save as pending approval" Command="{Binding SaveAsPendingCommand}" />
+          </StackPanel>
+
+          <Border Classes="Notice" IsVisible="{Binding IsPendingAdministratorApproval}">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Waiting for administrator approval" FontWeight="SemiBold" />
+              <TextBlock Classes="Body"
+                         Text="An authorized Microsoft Entra administrator must approve this request. Send them the consent link, then use Check again once they confirm they have approved it." />
+              <Button Content="Check again" Command="{Binding VerifyCommand}" HorizontalAlignment="Left" />
+            </StackPanel>
+          </Border>
+
+          <TextBox Text="{Binding ConsentUrl}" IsReadOnly="True" Classes="Mono"
+                   IsVisible="{Binding ConsentUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   AutomationProperties.Name="Consent link" />
+        </StackPanel>
+
+        <!-- ===== PAGE 7: VERIFICATION ===== -->
+        <StackPanel Spacing="8"
+                    IsVisible="{Binding CurrentPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Verification}">
+          <TextBlock Classes="Body"
+                     Text="Consent is verified by actually obtaining a token and comparing the permissions Microsoft Entra issued against those required. A redirect that merely looked successful is not accepted as proof." />
+
+          <Button Content="Check again" Command="{Binding VerifyCommand}" HorizontalAlignment="Left" />
+
+          <Border Classes="Card" IsVisible="{Binding Verification, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Results" Classes="SectionTitle" Margin="0" />
+              <TextBlock Text="{Binding Verification.CanAcquireToken, StringFormat='Token acquired: {0}'}" />
+              <TextBlock Text="{Binding Verification.GraphConnectivityOk, StringFormat='Microsoft Graph reachable: {0}'}" />
+              <TextBlock Text="{Binding Verification.ConsentState, StringFormat='Consent state: {0}'}" />
+
+              <TextBlock Text="Permissions" Classes="SectionTitle" />
+              <ItemsControl ItemsSource="{Binding Verification.PermissionStates}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="models:PermissionGrantState">
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
+                      <TextBlock Text="{Binding IsGranted}" Width="60" />
+                      <TextBlock Text="{Binding Requirement.Scope}" Classes="Mono" Width="220" />
+                      <TextBlock Text="{Binding GrantSource}" Classes="Subtle" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="Warning" IsVisible="{Binding VerificationWarnings.Count}">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Warnings" FontWeight="SemiBold" />
+              <ItemsControl ItemsSource="{Binding VerificationWarnings}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <TextBlock Text="{Binding}" Classes="Body" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <!-- Stated plainly rather than presented as a pass. -->
+          <Border Classes="Notice" IsVisible="{Binding VerificationNotChecked.Count}">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Not checked" FontWeight="SemiBold" />
+              <ItemsControl ItemsSource="{Binding VerificationNotChecked}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <TextBlock Text="{Binding}" Classes="Body" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- ===== PAGE 8: COMPLETION ===== -->
+        <StackPanel Spacing="8"
+                    IsVisible="{Binding CurrentPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Completion}">
+          <Border Classes="Card">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Configuration" Classes="SectionTitle" Margin="0" />
+              <TextBlock Text="{Binding TenantId, StringFormat='Tenant ID: {0}'}" Classes="Mono" />
+              <TextBlock Text="{Binding ProposedApplicationName, StringFormat='Application: {0}'}" />
+              <TextBlock Text="{Binding ResultingClientId, StringFormat='Client ID: {0}'}" Classes="Mono"
+                         IsVisible="{Binding ResultingClientId, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <TextBlock Text="{Binding Verification.ConsentState, StringFormat='Consent: {0}'}" />
+            </StackPanel>
+          </Border>
+
+          <WrapPanel>
+            <Button Content="Open App Registration" Margin="0,0,8,8"
+                    Command="{Binding OpenAppRegistrationCommand}" />
+            <Button Content="Open Enterprise Application" Margin="0,0,8,8"
+                    Command="{Binding OpenEnterpriseApplicationCommand}" />
+            <Button Content="Export sanitized configuration summary" Margin="0,0,8,8"
+                    Command="{Binding ExportSanitizedSummaryCommand}" />
+          </WrapPanel>
+        </StackPanel>
+
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

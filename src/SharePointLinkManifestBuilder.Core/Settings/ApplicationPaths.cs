@@ -1,3 +1,5 @@
+using SharePointLinkManifestBuilder.Core.Models;
+
 namespace SharePointLinkManifestBuilder.Core.Settings;
 
 /// <summary>
@@ -71,15 +73,15 @@ public sealed class ApplicationPaths
     /// A user-facing description of every local location, shown on the privacy page so the
     /// answer to "what does this store on my machine, and where" is discoverable in the UI.
     /// </summary>
-    public IReadOnlyList<(string Description, string Path)> Describe() =>
+    public IReadOnlyList<StorageLocationInfo> Describe() =>
     [
-        ("Application settings (no identifiers)", SettingsFile),
-        ("Microsoft 365 connection settings (tenant ID and client ID; no secrets)", TenantConfigurationFile),
-        ("Saved job profiles", ProfilesDirectory),
-        ("Job history", HistoryDirectory),
-        ("Record of changes made to your tenant", AuditDirectory),
-        ("Log files", LogDirectory),
-        ("Sign-in cache, protected by the operating system", TokenCacheDirectory),
+        new StorageLocationInfo("Application settings (no identifiers)", SettingsFile),
+        new StorageLocationInfo("Microsoft 365 connection settings (tenant ID and client ID; no secrets)", TenantConfigurationFile),
+        new StorageLocationInfo("Saved job profiles", ProfilesDirectory),
+        new StorageLocationInfo("Job history", HistoryDirectory),
+        new StorageLocationInfo("Record of changes made to your tenant", AuditDirectory),
+        new StorageLocationInfo("Log files", LogDirectory),
+        new StorageLocationInfo("Sign-in cache, protected by the operating system", TokenCacheDirectory),
     ];
 
     private static string ResolveDefaultRoot()

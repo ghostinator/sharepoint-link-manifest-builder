@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+             xmlns:models="using:SharePointLinkManifestBuilder.Core.Models"
+             x:Class="SharePointLinkManifestBuilder.App.Views.JobHistoryView"
+             x:DataType="vm:JobHistoryViewModel">
+
+  <Grid RowDefinitions="Auto,*" Margin="24">
+    <StackPanel Grid.Row="0" Spacing="8">
+      <TextBlock Text="Job History" Classes="PageTitle" />
+      <TextBlock Classes="Subtle"
+                 Text="Past runs on this machine. No credential or token is stored here." />
+
+      <TextBlock Text="{Binding StatusMessage}" Classes="Subtle"
+                 IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 AutomationProperties.LiveSetting="Polite" />
+      <Border Classes="Danger" IsVisible="{Binding HasError}">
+        <TextBlock Text="{Binding ErrorMessage}" Classes="Body" />
+      </Border>
+
+      <WrapPanel>
+        <Button Content="Reload" Margin="0,0,8,8" Command="{Binding ReloadCommand}" />
+        <Button Content="Load configuration into New Link Job" Margin="0,0,8,8"
+                Command="{Binding RerunConfigurationCommand}" />
+        <Button Content="Export sanitized report" Margin="0,0,8,8" Command="{Binding ExportReportCommand}" />
+        <Button Content="Delete entry" Margin="0,0,8,8" Command="{Binding DeleteEntryCommand}" />
+        <Button Content="Clear all history" Margin="0,0,8,8" Command="{Binding ClearAllCommand}" />
+      </WrapPanel>
+
+      <TextBlock Classes="Subtle" Text="No jobs have been run yet." IsVisible="{Binding !Entries.Count}" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,380" Margin="0,12,0,0">
+      <DataGrid Grid.Column="0" ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}"
+                IsReadOnly="True" GridLinesVisibility="Horizontal" Margin="0,0,12,0"
+                AutomationProperties.Name="Job history">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="Started" Binding="{Binding StartedUtc}" Width="180" />
+          <DataGridTextColumn Header="Outcome" Binding="{Binding FinalPhase}" Width="120" />
+          <DataGridTextColumn Header="Created" Binding="{Binding CreatedCount}" Width="80" />
+          <DataGridTextColumn Header="Reused" Binding="{Binding ReusedCount}" Width="80" />
+          <DataGridTextColumn Header="Failed" Binding="{Binding FailedCount}" Width="80" />
+          <DataGridTextColumn Header="Dry run" Binding="{Binding WasDryRun}" Width="80" />
+          <DataGridTextColumn Header="Tenant" Binding="{Binding TenantDisplayName}" Width="*" />
+        </DataGrid.Columns>
+      </DataGrid>
+
+      <ScrollViewer Grid.Column="1">
+        <Border Classes="Card" IsVisible="{Binding SelectedEntry, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Job details" Classes="SectionTitle" Margin="0" />
+            <TextBlock Text="{Binding SelectedEntry.JobId, StringFormat='Job ID: {0}'}" Classes="Mono" />
+            <TextBlock Text="{Binding SelectedEntry.ApplicationVersion, StringFormat='Version: {0}'}" />
+            <TextBlock Text="{Binding SelectedEntry.AccountIdentifier, StringFormat='Account: {0}'}" />
+            <TextBlock Text="{Binding SelectedEntry.LinkSettingsSummary, StringFormat='Links: {0}'}"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding SelectedEntry.FilterSummary, StringFormat='Filters: {0}'}"
+                       TextWrapping="Wrap" />
+
+            <TextBlock Text="Targets" Classes="SectionTitle" />
+            <ItemsControl ItemsSource="{Binding SelectedEntry.TargetDescriptions}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Text="{Binding}" Classes="Subtle" TextWrapping="Wrap" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="Manifests" Classes="SectionTitle" />
+            <ItemsControl ItemsSource="{Binding SelectedEntry.ManifestLocations}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Text="{Binding}" Classes="Mono" TextWrapping="Wrap" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="Sanitized errors" Classes="SectionTitle" />
+            <ItemsControl ItemsSource="{Binding SelectedEntry.SanitizedErrors}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Text="{Binding}" Classes="Subtle" TextWrapping="Wrap" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</UserControl>

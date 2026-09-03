@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+             xmlns:models="using:SharePointLinkManifestBuilder.Core.Models"
+             x:Class="SharePointLinkManifestBuilder.App.Views.SavedProfilesView"
+             x:DataType="vm:SavedProfilesViewModel">
+
+  <Grid RowDefinitions="Auto,*" Margin="24">
+    <StackPanel Grid.Row="0" Spacing="8">
+      <TextBlock Text="Saved Profiles" Classes="PageTitle" />
+      <TextBlock Classes="Subtle"
+                 Text="Save a job configuration to reuse it later. Profiles contain no credential or token." />
+
+      <TextBlock Text="{Binding StatusMessage}" Classes="Subtle"
+                 IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 AutomationProperties.LiveSetting="Polite" />
+      <Border Classes="Danger" IsVisible="{Binding HasError}">
+        <TextBlock Text="{Binding ErrorMessage}" Classes="Body" />
+      </Border>
+
+      <Border Classes="Card">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Save the current job configuration" Classes="SectionTitle" Margin="0" />
+          <TextBox Text="{Binding NewProfileName}" Watermark="Profile name"
+                   AutomationProperties.Name="Profile name" />
+          <TextBox Text="{Binding NewProfileDescription}" Watermark="Description (optional)"
+                   AutomationProperties.Name="Profile description" />
+          <Button Content="Save profile" Classes="Primary" Command="{Binding SaveCurrentCommand}"
+                  HorizontalAlignment="Left" />
+        </StackPanel>
+      </Border>
+
+      <WrapPanel>
+        <Button Content="Reload" Margin="0,0,8,8" Command="{Binding ReloadCommand}" />
+        <Button Content="Load into New Link Job" Margin="0,0,8,8" Command="{Binding LoadProfileCommand}" />
+        <Button Content="Delete profile" Margin="0,0,8,8" Command="{Binding DeleteProfileCommand}" />
+      </WrapPanel>
+
+      <TextBlock Classes="Subtle" Text="No profiles saved yet." IsVisible="{Binding !Profiles.Count}" />
+    </StackPanel>
+
+    <ListBox Grid.Row="1" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}"
+             Margin="0,12,0,0" AutomationProperties.Name="Saved profiles">
+      <ListBox.ItemTemplate>
+        <DataTemplate DataType="models:SavedProfile">
+          <StackPanel Margin="0,4" Spacing="2">
+            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Description}" Classes="Subtle"
+                       IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Classes="Subtle" FontSize="11">
+              <TextBlock.Text>
+                <MultiBinding StringFormat="{}{0} target(s), created {1}">
+                  <Binding Path="Configuration.Targets.Count" />
+                  <Binding Path="CreatedUtc" />
+                </MultiBinding>
+              </TextBlock.Text>
+            </TextBlock>
+          </StackPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </Grid>
+</UserControl>
