@@ -9,6 +9,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **An explicit opt-in for a broader bootstrap permission.** `AppRegistration.Create` is the
+  least-privileged permission documented for `POST /applications` and remains the default, but
+  some tenants' portal permission picker does not list it yet. Advanced now offers
+  `Application.ReadWrite.All` as a deliberate, warned, logged choice rather than a silent
+  fallback, since it can modify and delete every registration in the directory.
+
 - Optional multi-organization mode. One installation can now be used across several Microsoft
   365 organizations with a registration set to *Accounts in any organizational directory*,
   using the `/organizations` authority. Never `/common`, which would also admit personal
@@ -22,6 +28,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Builds failed intermittently inside cloud-synced folders.** A clone under OneDrive, iCloud
+  Drive, Dropbox or Google Drive hits `MSB3026`/`MSB3027` ("Access to the path ... is denied")
+  when the sync client holds a freshly written assembly. `scripts/common.sh` now detects a clone
+  inside a known sync root and redirects build output to `~/.cache/splmb-build/<repo>`, with a
+  warning saying so; `SPLMB_ARTIFACTS_PATH` overrides the location. Clones outside a sync root,
+  including CI, keep the standard layout.
 - **A sign-in that never returned from the browser wedged the setup wizard.** Interactive
   sign-in and administrator consent both complete only when Microsoft Entra redirects back to
   the loopback listener. When Entra instead shows an error *in the browser* — a wrong-but-valid

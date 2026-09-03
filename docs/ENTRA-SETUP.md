@@ -217,6 +217,28 @@ Automatic setup (Path A) needs a publisher-owned bootstrap identity. To enable i
 3. Publish a privacy policy and support URL and set them on the registration, so the consent
    screen shows a real publisher.
 
+### If the portal does not list `AppRegistration.Create`
+
+`AppRegistration.Create` is the least-privileged permission Microsoft documents for
+`POST /applications` ([Create application][create-app]), but it is recent, and some tenants'
+permission picker does not offer it yet. Search for it under **Microsoft Graph -> Delegated
+permissions**; if it genuinely is not listed, the documented higher-privileged alternative is
+`Application.ReadWrite.All`.
+
+Understand what that costs before choosing it. `AppRegistration.Create` can only create a
+registration. `Application.ReadWrite.All` can **read, modify and delete every application
+registration in the directory**, and always requires administrator consent. Tick *"My tenant's
+portal does not list AppRegistration.Create"* under **Advanced** on the sign-in page so the
+application requests the broader scope deliberately and records that it did. It is never
+substituted silently.
+
+A second, independent requirement: the scope alone is not enough. The signed-in user must also
+hold a directory role that permits creating registrations — **Application Developer** is the
+least-privileged one that always works, and by default ordinary members can do it too unless the
+tenant has restricted default user permissions.
+
+[create-app]: https://learn.microsoft.com/en-us/graph/api/application-post-applications?view=graph-rest-1.0
+
 **Do not commit a client ID to source control.** This repository intentionally contains none;
 `Bootstrap:ClientId` is empty in the sample configuration and automatic setup reports itself
 as unavailable until it is set.

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharePointLinkManifestBuilder.App.Composition;
 using SharePointLinkManifestBuilder.App.ViewModels;
+using SharePointLinkManifestBuilder.Core.Models;
 using SharePointLinkManifestBuilder.Core.Settings;
 
 namespace SharePointLinkManifestBuilder.App.Tests;
@@ -43,6 +44,13 @@ public sealed class SetupWizardRecoveryTests : IDisposable
     /// reports CanExecute false for as long as it runs, so a sign-in that never completes
     /// disables the only button that could retry it.
     /// </summary>
+    [Fact]
+    public void BroadBootstrapPermission_IsOffUnlessTheUserAsksForIt()
+    {
+        Assert.False(Wizard().UseBroadBootstrapPermission);
+    }
+
+    /// <summary>An in-flight sign-in must be cancellable.</summary>
     [Fact]
     public void SignIn_ExposesACancelCommand()
     {
@@ -141,5 +149,54 @@ public sealed class SetupWizardRecoveryTests : IDisposable
 
         Assert.True(wizard.SignInCommand.CanExecute(null));
         Assert.True(wizard.CanGoBack);
+    }
+}
+
+/// <summary>
+/// The bootstrap permission tier is a privilege decision, so it gets its own coverage. The
+/// narrow tier must stay the default: falling back to a directory-wide write permission because
+/// the narrow one was inconvenient would be a silent escalation.
+/// </summary>
+public sealed class BootstrapPermissionTierTests
+{
+    /// <summary>AppRegistration.Create is the least-privileged documented option, so it is default.</summary>
+    [Fact]
+    public void CreateOnlyTier_AsksOnlyToCreate()
+    {
+        var scopes = GraphScopes.BootstrapCreateOnlyTier.Select(p => p.Scope).ToArray();
+
+        Assert.Contains("AppRegistration.Create", scopes);
+        Assert.DoesNotContain("Application.ReadWrite.All", scopes);
+    }
+
+    /// <summary>The broad tier is the documented higher-privileged alternative, and only that.</summary>
+    [Fact]
+    public void ManageTier_IsTheDocumentedBroaderAlternative()
+    {
+        var scopes = GraphScopes.BootstrapManageTier.Select(p => p.Scope).ToArray();
+
+        Assert.Contains("Application.ReadWrite.All", scopes);
+        Assert.DoesNotContain("AppRegistration.Create", scopes);
+    }
+
+    /// <summary>
+    /// Both tiers need an identity to attribute the registration to, so User.Read is in each.
+    /// </summary>
+    [Fact]
+    public void BothTiers_IncludeUserRead()
+    {
+        Assert.Contains("User.Read", GraphScopes.BootstrapCreateOnlyTier.Select(p => p.Scope));
+        Assert.Contains("User.Read", GraphScopes.BootstrapManageTier.Select(p => p.Scope));
+    }
+
+    /// <summary>The broader permission must be described as needing admin consent, because it does.</summary>
+    [Fact]
+    public void ManageTier_DeclaresThatAdministratorConsentIsExpected()
+    {
+        var broad = GraphScopes.BootstrapManageTier
+            .Single(p => p.Scope == "Application.ReadWrite.All");
+
+        Assert.True(broad.AdminConsentExpected);
+        Assert.Equal(PermissionBreadth.Broad, broad.Breadth);
     }
 }

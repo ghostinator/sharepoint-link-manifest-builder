@@ -252,3 +252,28 @@ anyway* if you trust the source.
 When reporting a problem, include the application version, platform, the error message, and the
 correlation ID. Do **not** include tokens, sharing links, real URLs, tenant identifiers or
 personal data. See [SUPPORT.md](SUPPORT.md).
+
+## The build fails with "Access to the path ... is denied" (MSB3026 / MSB3027)
+
+MSBuild retries the copy ten times and then fails. The message names a permission problem, but
+the permissions are usually fine — POSIX has no distinct error for "another process is holding
+this file", so contention surfaces as the same `EACCES` as a genuine permission fault.
+
+The common cause is a clone inside a cloud-synced folder: OneDrive, iCloud Drive, Dropbox or
+Google Drive. A .NET build writes thousands of small files, and a sync client that wants to
+upload each one will intermittently hold a freshly written assembly. The same build then
+succeeds moments later, which is what makes it look random.
+
+`scripts/common.sh` detects a clone inside a known sync root and redirects build output to
+`~/.cache/splmb-build/<repo>`, printing a warning when it does. Set `SPLMB_ARTIFACTS_PATH` to
+choose a different location. To build a single project by hand:
+
+```bash
+dotnet build src/SharePointLinkManifestBuilder.App -c Release -p:ArtifactsPath="$HOME/.cache/splmb-build"
+```
+
+The durable fix is to keep the clone outside the synced folder entirely.
+
+A second cause, worth ruling out: two builds running at once against the same output directory —
+an editor building in the background while a script builds in a terminal, for instance. MSBuild
+assumes a single writer per `bin/`.

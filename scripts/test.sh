@@ -6,7 +6,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 mkdir -p "${ARTIFACTS}/test-results"
 
 say "Running tests (${CONFIGURATION})"
-dotnet test "${SOLUTION}" \
+dotnet test "${SOLUTION}" "${BUILD_OUTPUT_ARGS[@]}" \
   --configuration "${CONFIGURATION}" \
   --logger "trx;LogFileName=results.trx" \
   --results-directory "${ARTIFACTS}/test-results" \

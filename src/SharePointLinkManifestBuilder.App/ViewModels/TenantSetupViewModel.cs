@@ -119,6 +119,20 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     [ObservableProperty]
     private string _bootstrapClientIdOverride = string.Empty;
 
+    /// <summary>
+    /// Whether the bootstrap registration should request <c>Application.ReadWrite.All</c> instead
+    /// of <c>AppRegistration.Create</c>.
+    /// <para>
+    /// Off by default, and deliberately phrased as a downgrade rather than an option.
+    /// <c>AppRegistration.Create</c> is the least-privileged permission Microsoft documents for
+    /// <c>POST /applications</c> and is all this application needs, but it is new enough that
+    /// some tenants' portal permission picker does not list it. Where that happens the only
+    /// consentable alternative is far broader, so the user chooses it knowingly.
+    /// </para>
+    /// </summary>
+    [ObservableProperty]
+    private bool _useBroadBootstrapPermission;
+
     /// <summary>The account signed in during the wizard.</summary>
     [ObservableProperty]
     private UserAccount? _signedInAccount;
@@ -413,9 +427,26 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
 
             await _connection.ApplyTenantAsync(configuration, cancellationToken).ConfigureAwait(true);
 
+            // The narrow tier is the default and the right answer. The broad tier exists because
+            // AppRegistration.Create is recent enough that some tenants' portal permission picker
+            // does not offer it yet, leaving Application.ReadWrite.All as the only consentable
+            // alternative. That is a real escalation -- it can modify and delete every
+            // registration in the directory, not just create one -- so it is an explicit choice
+            // the user makes and can see, never a silent fallback.
+            var bootstrapTier = UseBroadBootstrapPermission
+                ? GraphScopes.BootstrapManageTier
+                : GraphScopes.BootstrapCreateOnlyTier;
+
             var scopes = Method == SetupMethod.Automatic
-                ? GraphScopes.BootstrapCreateOnlyTier.Select(p => p.Scope).ToArray()
+                ? bootstrapTier.Select(p => p.Scope).ToArray()
                 : configuration.RequiredScopes.ToArray();
+
+            if (Method == SetupMethod.Automatic && UseBroadBootstrapPermission)
+            {
+                _logger.LogWarning(
+                    "Automatic setup is using the broad bootstrap permission tier at the user's "
+                    + "explicit request, because AppRegistration.Create was unavailable.");
+            }
 
             using var timeout = new CancellationTokenSource(BrowserRoundTripTimeout);
             using var linked = CancellationTokenSource
