@@ -8,8 +8,12 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon></ApplicationIcon>
-    <!-- UI types are not a consumable public API surface; XML docs are not required here. -->
+    <!-- UI types are not a consumable public API surface, so no XML documentation file is
+         produced and CS1591 is not enforced here. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Useful while developing; not something to ship to an end user. -->
+    <AllowedReferenceRelatedFileExtensions>none</AllowedReferenceRelatedFileExtensions>
     <TrimMode>partial</TrimMode>
     <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
     <PublishSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</PublishSingleFile>
@@ -33,7 +37,11 @@
     <PackageReference Include="Microsoft.Extensions.Options" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Shipped beside the executable, not embedded, so a publisher can set their product
+         metadata and bootstrap client ID without rebuilding. -->
+    <None Update="appsettings.json"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../SharePointLinkManifestBuilder.Core/SharePointLinkManifestBuilder.Core.csproj" />
