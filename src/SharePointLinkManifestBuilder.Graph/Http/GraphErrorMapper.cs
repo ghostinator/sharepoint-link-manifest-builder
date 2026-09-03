@@ -161,12 +161,20 @@ public static class GraphErrorMapper
                 (GraphErrorKind.SiteNotFound, "That SharePoint site could not be found.",
                     "Check the URL, or that you have access to the site.", false),
 
-            404 when Contains(operation, "drive") || Contains(operation, "library") =>
-                (GraphErrorKind.LibraryNotFound, "That document library or drive could not be found.", null, false),
+            // Ordered most specific first: "a drive item" also contains "drive", so the item
+            // case has to be matched before the library case or every missing file would be
+            // reported as a missing library.
+            404 when Contains(operation, "drive item") =>
+                (GraphErrorKind.FileDeletedDuringProcessing,
+                    "The item could not be found. It may have been deleted or moved while the job was running.",
+                    null, false),
 
             404 when Contains(operation, "folder") =>
                 (GraphErrorKind.FolderNotFound, "That folder could not be found.",
                     "It may have been moved or deleted since it was selected.", false),
+
+            404 when Contains(operation, "drive") || Contains(operation, "library") =>
+                (GraphErrorKind.LibraryNotFound, "That document library or drive could not be found.", null, false),
 
             404 => (GraphErrorKind.FileDeletedDuringProcessing,
                 "The item could not be found. It may have been deleted or moved while the job was running.",

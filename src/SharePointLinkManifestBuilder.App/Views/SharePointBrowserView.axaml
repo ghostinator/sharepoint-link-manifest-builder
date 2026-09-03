@@ -22,7 +22,7 @@
 
       <Grid ColumnDefinitions="*,Auto,Auto,Auto">
         <TextBox Grid.Column="0" Text="{Binding SearchQuery}"
-                 Watermark="Search sites by name"
+                 PlaceholderText="Search sites by name"
                  AutomationProperties.Name="Search SharePoint sites">
           <TextBox.KeyBindings>
             <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
@@ -37,7 +37,7 @@
 
       <Grid ColumnDefinitions="*,Auto">
         <TextBox Grid.Column="0" Text="{Binding PastedUrl}"
-                 Watermark="Or paste a SharePoint site, library or folder URL"
+                 PlaceholderText="Or paste a SharePoint site, library or folder URL"
                  AutomationProperties.Name="Paste a SharePoint URL">
           <TextBox.KeyBindings>
             <KeyBinding Gesture="Enter" Command="{Binding OpenPastedUrlCommand}" />

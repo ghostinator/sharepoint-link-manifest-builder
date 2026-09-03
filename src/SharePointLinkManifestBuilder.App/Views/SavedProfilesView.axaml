@@ -21,9 +21,9 @@
       <Border Classes="Card">
         <StackPanel Spacing="8">
           <TextBlock Text="Save the current job configuration" Classes="SectionTitle" Margin="0" />
-          <TextBox Text="{Binding NewProfileName}" Watermark="Profile name"
+          <TextBox Text="{Binding NewProfileName}" PlaceholderText="Profile name"
                    AutomationProperties.Name="Profile name" />
-          <TextBox Text="{Binding NewProfileDescription}" Watermark="Description (optional)"
+          <TextBox Text="{Binding NewProfileDescription}" PlaceholderText="Description (optional)"
                    AutomationProperties.Name="Profile description" />
           <Button Content="Save profile" Classes="Primary" Command="{Binding SaveCurrentCommand}"
                   HorizontalAlignment="Left" />

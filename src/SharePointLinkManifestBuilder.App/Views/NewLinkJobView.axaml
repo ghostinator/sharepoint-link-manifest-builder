@@ -118,13 +118,13 @@
               <TextBlock Classes="Subtle"
                          Text="One address per line, or separated by commas. Microsoft Graph grants these people access through a separate invite operation; the v1.0 createLink action does not take recipients." />
               <TextBox Text="{Binding RecipientsText}" AcceptsReturn="True" Height="90"
-                       Watermark="person@example.com"
+                       PlaceholderText="person@example.com"
                        AutomationProperties.Name="Recipients, one per line" />
               <CheckBox Content="Send Microsoft's invitation email to these recipients"
                         IsChecked="{Binding SendInvitationEmail}" />
               <TextBlock Classes="Subtle" FontSize="11"
                          Text="Off by default. No message is sent unless you tick this." />
-              <TextBox Text="{Binding InvitationMessage}" Watermark="Optional message"
+              <TextBox Text="{Binding InvitationMessage}" PlaceholderText="Optional message"
                        IsEnabled="{Binding SendInvitationEmail}"
                        AutomationProperties.Name="Invitation message" />
             </StackPanel>
@@ -200,15 +200,15 @@
                        Text="All filters are optional. Temporary files, generated manifests, hidden and system items, packages and shortcuts are excluded by default." />
 
             <TextBlock Text="Extensions" Classes="SectionTitle" />
-            <TextBox Text="{Binding IncludeExtensions}" Watermark="Include, e.g. docx, pdf, xlsx"
+            <TextBox Text="{Binding IncludeExtensions}" PlaceholderText="Include, e.g. docx, pdf, xlsx"
                      AutomationProperties.Name="Include extensions" />
-            <TextBox Text="{Binding ExcludeExtensions}" Watermark="Exclude, e.g. exe, zip"
+            <TextBox Text="{Binding ExcludeExtensions}" PlaceholderText="Exclude, e.g. exe, zip"
                      AutomationProperties.Name="Exclude extensions" />
 
             <TextBlock Text="Name patterns" Classes="SectionTitle" />
-            <TextBox Text="{Binding IncludePatterns}" Watermark="Include, e.g. report*, *-final.*"
+            <TextBox Text="{Binding IncludePatterns}" PlaceholderText="Include, e.g. report*, *-final.*"
                      AutomationProperties.Name="Include name patterns" />
-            <TextBox Text="{Binding ExcludePatterns}" Watermark="Exclude, e.g. *draft*"
+            <TextBox Text="{Binding ExcludePatterns}" PlaceholderText="Exclude, e.g. *draft*"
                      AutomationProperties.Name="Exclude name patterns" />
             <TextBlock Classes="Subtle" FontSize="11" Text="* matches any run of characters, ? matches exactly one." />
 

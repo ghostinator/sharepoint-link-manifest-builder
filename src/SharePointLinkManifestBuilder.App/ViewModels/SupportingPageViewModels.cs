@@ -439,7 +439,7 @@ public sealed partial class DiagnosticsViewModel : PageViewModelBase
     public override async Task OnNavigatedToAsync(CancellationToken cancellationToken = default)
     {
         var history = await _historyStore.ListAsync(cancellationToken).ConfigureAwait(true);
-        var latest = history.FirstOrDefault();
+        var latest = history.Count > 0 ? history[0] : null;
 
         LastJobSummary = latest is null
             ? "No jobs have been run."

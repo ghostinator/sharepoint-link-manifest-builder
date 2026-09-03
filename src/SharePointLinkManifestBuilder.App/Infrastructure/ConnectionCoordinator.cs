@@ -249,7 +249,8 @@ public sealed class ConnectionCoordinator
             .GetAsync<GraphOrganizationCollection>(GraphPaths.Organization(), cancellationToken)
             .ConfigureAwait(false);
 
-        var organization = response.Value?.Value?.FirstOrDefault();
+        var organizations = response.Value?.Value;
+        var organization = organizations is { Count: > 0 } ? organizations[0] : null;
 
         if (response.Succeeded && organization?.DisplayName is { Length: > 0 } name)
         {

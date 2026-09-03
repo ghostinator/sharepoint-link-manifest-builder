@@ -18,7 +18,7 @@ namespace SharePointLinkManifestBuilder.App.ViewModels;
 /// screen.
 /// </para>
 /// </summary>
-public sealed partial class NewLinkJobViewModel : PageViewModelBase
+public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
 {
     private readonly ILinkJobRunner _runner;
     private readonly ConnectionCoordinator _connection;
@@ -545,6 +545,13 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase
         {
             await _browser.OpenAsync(uri).ConfigureAwait(true);
         }
+    }
+
+    /// <summary>Releases the run's cancellation source and pause token.</summary>
+    public void Dispose()
+    {
+        _runCancellation?.Dispose();
+        _pauseToken?.Dispose();
     }
 
     private void RefreshTargets()

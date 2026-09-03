@@ -29,7 +29,7 @@
 
           <Grid ColumnDefinitions="*,Auto,Auto">
             <TextBox Grid.Column="0" Text="{Binding UserSearchQuery}"
-                     Watermark="Search for a user by name or sign-in address"
+                     PlaceholderText="Search for a user by name or sign-in address"
                      AutomationProperties.Name="Search for a user">
               <TextBox.KeyBindings>
                 <KeyBinding Gesture="Enter" Command="{Binding SearchUsersCommand}" />

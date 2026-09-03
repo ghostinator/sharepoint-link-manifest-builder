@@ -152,7 +152,7 @@ public sealed class DiagnosticsService : IDiagnosticsService
         var tenant = await _tenantStore.LoadAsync(cancellationToken).ConfigureAwait(false);
         var settings = await _settingsStore.LoadAsync(cancellationToken).ConfigureAwait(false);
         var history = await _historyStore.ListAsync(cancellationToken).ConfigureAwait(false);
-        var latest = history.FirstOrDefault();
+        var latest = history.Count > 0 ? history[0] : null;
 
         var builder = new StringBuilder();
         builder.AppendLine("SharePoint Link Manifest Builder - diagnostic summary");

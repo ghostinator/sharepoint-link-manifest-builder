@@ -124,7 +124,9 @@ public sealed class GraphApiClient : IGraphApiClient
                     Content = new ReadOnlyMemoryContent(content),
                 };
 
-                request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+                // Parse, not the constructor: MediaTypeHeaderValue(string) rejects anything
+                // carrying parameters, so "text/plain; charset=utf-8" throws a FormatException.
+                request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
 
                 // A conditional write is the only thing standing between this application and
                 // silently clobbering a file somebody changed a moment ago.
@@ -490,9 +492,15 @@ public sealed class GraphApiClient : IGraphApiClient
     private Uri BuildUri(string relativeOrAbsolute)
     {
         // A nextLink is absolute; everything else is relative to the configured endpoint.
-        if (Uri.TryCreate(relativeOrAbsolute, UriKind.Absolute, out var absolute))
+        //
+        // The scheme is checked explicitly rather than relying on Uri.TryCreate with
+        // UriKind.Absolute. On macOS and Linux "/me" IS a valid absolute URI: it parses as the
+        // file scheme. Trusting TryCreate here turned every relative Graph path into
+        // "file:///me" on those platforms while working correctly on Windows.
+        if (relativeOrAbsolute.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            || relativeOrAbsolute.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
         {
-            return absolute;
+            return new Uri(relativeOrAbsolute, UriKind.Absolute);
         }
 
         var path = relativeOrAbsolute.StartsWith('/') ? relativeOrAbsolute : "/" + relativeOrAbsolute;
@@ -517,7 +525,12 @@ public sealed class GraphApiClient : IGraphApiClient
         var noun = segments[0].ToLowerInvariant() switch
         {
             "sites" => "a SharePoint site",
-            "drives" => "a drive item",
+
+            // A missing drive and a missing item inside a drive are different failures, so the
+            // wording has to distinguish them for the error mapper.
+            "drives" => path.Contains("/items/", StringComparison.OrdinalIgnoreCase)
+                ? "a drive item"
+                : "a drive",
             "me" => "your profile",
             "users" => "a user",
             "shares" => "a shared item",

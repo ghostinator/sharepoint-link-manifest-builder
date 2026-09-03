@@ -183,7 +183,7 @@
             <TextBlock Classes="Body"
                        Text="To confirm, type the application's display name exactly as shown above." />
             <TextBox Text="{Binding DeleteConfirmationText}"
-                     Watermark="Application display name"
+                     PlaceholderText="Application display name"
                      AutomationProperties.Name="Type the application display name to confirm deletion" />
             <Button Content="Delete registration permanently" Classes="Destructive"
                     IsEnabled="{Binding IsDeleteConfirmed}"
