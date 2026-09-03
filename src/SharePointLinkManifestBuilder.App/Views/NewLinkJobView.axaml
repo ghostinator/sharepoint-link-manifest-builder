@@ -131,7 +131,7 @@
 
             <TextBlock Text="Expiry and behaviour" Classes="SectionTitle" />
             <CheckBox Content="Request an expiry date" IsChecked="{Binding UseExpiration}" />
-            <CalendarDatePicker SelectedDate="{Binding ExpirationDate}"
+            <CalendarDatePicker SelectedDate="{Binding ExpirationDate, Converter={x:Static conv:DateTimeOffsetToDateTimeConverter.Instance}}"
                                 IsEnabled="{Binding UseExpiration}"
                                 AutomationProperties.Name="Link expiry date" />
             <TextBlock Classes="Subtle" FontSize="11"
@@ -214,9 +214,9 @@
 
             <TextBlock Text="Modified date" Classes="SectionTitle" />
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <CalendarDatePicker SelectedDate="{Binding ModifiedAfter}"
+              <CalendarDatePicker SelectedDate="{Binding ModifiedAfter, Converter={x:Static conv:DateTimeOffsetToDateTimeConverter.Instance}}"
                                   AutomationProperties.Name="Modified on or after" />
-              <CalendarDatePicker SelectedDate="{Binding ModifiedBefore}"
+              <CalendarDatePicker SelectedDate="{Binding ModifiedBefore, Converter={x:Static conv:DateTimeOffsetToDateTimeConverter.Instance}}"
                                   AutomationProperties.Name="Modified on or before" />
             </StackPanel>
 

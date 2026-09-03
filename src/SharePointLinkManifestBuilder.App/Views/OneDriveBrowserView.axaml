@@ -91,6 +91,15 @@
 
           <TreeView ItemsSource="{Binding Roots}" SelectedItem="{Binding SelectedNode}"
                     AutomationProperties.Name="OneDrive resource tree">
+            <TreeView.Styles>
+              <!-- Without this the view model never learns that the user expanded a node, so
+                   OnIsExpandedChanged never fires, EnsureChildrenLoadedAsync is never called,
+                   and the node shows its "Loading..." placeholder forever. The container owns
+                   the expansion state; the binding is what hands it to the view model. -->
+              <Style Selector="TreeViewItem" x:DataType="vm:ResourceNodeViewModel">
+                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+              </Style>
+            </TreeView.Styles>
             <TreeView.ItemTemplate>
               <TreeDataTemplate ItemsSource="{Binding Children}" DataType="vm:ResourceNodeViewModel">
                 <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,2">

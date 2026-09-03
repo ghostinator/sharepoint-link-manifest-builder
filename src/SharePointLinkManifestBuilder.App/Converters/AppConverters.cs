@@ -101,3 +101,39 @@ public sealed class ByteSizeConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         Avalonia.Data.BindingOperations.DoNothing;
 }
+
+/// <summary>
+/// Bridges <see cref="DateTimeOffset"/> view models to <c>CalendarDatePicker.SelectedDate</c>,
+/// which is <see cref="DateTime"/>.
+/// <para>
+/// Binding the two directly throws InvalidCastException at runtime -- the binding engine will
+/// not narrow a DateTimeOffset to a DateTime for you. The view models keep DateTimeOffset
+/// because that is what Microsoft Graph expects for a link expiry, and losing the offset on the
+/// way to Graph would silently shift an expiry by the machine's UTC offset.
+/// </para>
+/// </summary>
+public sealed class DateTimeOffsetToDateTimeConverter : IValueConverter
+{
+    /// <summary>The shared instance.</summary>
+    public static readonly DateTimeOffsetToDateTimeConverter Instance = new();
+
+    /// <inheritdoc />
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value switch
+        {
+            DateTimeOffset offset => offset.LocalDateTime,
+            DateTime local => local,
+            _ => null,
+        };
+
+    /// <inheritdoc />
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value switch
+        {
+            // The picker yields a local wall-clock date with no offset. Attaching the machine's
+            // current offset is what the user meant by picking that day where they are.
+            DateTime local => new DateTimeOffset(DateTime.SpecifyKind(local, DateTimeKind.Local)),
+            DateTimeOffset offset => offset,
+            _ => null,
+        };
+}

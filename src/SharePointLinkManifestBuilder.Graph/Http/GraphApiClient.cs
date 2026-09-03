@@ -382,10 +382,16 @@ public sealed class GraphApiClient : IGraphApiClient
                     var error = GraphErrorMapper.Map(
                         status, code, message, operation, correlationId, serviceRequestId);
 
+                    // The message is logged as well as the code. For a schema rejection --
+                    // Request_BadRequest above all -- the code says only "something in the body
+                    // was wrong" and the message is the sole statement of *what*. It is Entra's
+                    // description of the request this application constructed, not user content,
+                    // but it is redacted anyway so a value echoed back cannot leak through.
                     _logger.LogWarning(
                         "Graph request failed: {Operation} returned HTTP {Status} ({GraphCode}). "
-                        + "Correlation {CorrelationId}, service request {ServiceRequestId}.",
-                        operation, status, code ?? "none", correlationId, serviceRequestId ?? "none");
+                        + "Correlation {CorrelationId}, service request {ServiceRequestId}. Detail: {Detail}",
+                        operation, status, code ?? "none", correlationId, serviceRequestId ?? "none",
+                        SensitiveDataRedactor.Redact(message ?? "none"));
 
                     return Failure<T>(error, correlationId);
                 }
