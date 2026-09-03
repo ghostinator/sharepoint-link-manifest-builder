@@ -141,16 +141,21 @@ public sealed class PlainTextManifestParser : IManifestParser
             return false;
         }
 
-        var supportedMajor = MajorOf(ManifestDefaults.SchemaVersion);
-        var candidateMajor = MajorOf(version);
+        // A genuine "0.x" and unparseable junk must be distinguishable, so parse explicitly
+        // rather than folding both onto a sentinel major of zero.
+        if (!TryGetMajor(version, out var candidateMajor)
+            || !TryGetMajor(ManifestDefaults.SchemaVersion, out var supportedMajor))
+        {
+            return false;
+        }
 
-        return candidateMajor > 0 && candidateMajor <= supportedMajor;
+        return candidateMajor <= supportedMajor;
     }
 
-    private static int MajorOf(string version)
+    private static bool TryGetMajor(string version, out int major)
     {
         var head = version.Split('.')[0];
-        return int.TryParse(head, NumberStyles.Integer, CultureInfo.InvariantCulture, out var major) ? major : 0;
+        return int.TryParse(head, NumberStyles.Integer, CultureInfo.InvariantCulture, out major) && major >= 0;
     }
 
     private static bool TryBuildEntry(Dictionary<string, string> fields, out ManifestEntry entry)

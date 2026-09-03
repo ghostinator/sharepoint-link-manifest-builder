@@ -39,9 +39,15 @@ public static class MarkdownEscaper
         return builder.ToString();
     }
 
-    /// <summary>Escapes a value for use inside a Markdown table cell, where pipes break layout.</summary>
-    public static string EscapeTableCell(string? value) =>
-        Escape(value).Replace("|", "\\|", StringComparison.Ordinal);
+    /// <summary>
+    /// Escapes a value for use inside a Markdown table cell.
+    /// <para>
+    /// The pipe character is already in <see cref="SpecialCharacters"/>, so this simply defers
+    /// to <see cref="Escape"/>. Escaping the pipe a second time here would emit a literal
+    /// backslash followed by an unescaped pipe, breaking the very table it aims to protect.
+    /// </para>
+    /// </summary>
+    public static string EscapeTableCell(string? value) => Escape(value);
 
     /// <summary>
     /// Renders a Markdown link with an escaped label. URLs are angle-bracketed so parentheses

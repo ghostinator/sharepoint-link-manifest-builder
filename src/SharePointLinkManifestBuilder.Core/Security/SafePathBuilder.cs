@@ -23,6 +23,18 @@ public readonly record struct PathValidationResult(bool IsSafe, string? Reason)
 /// </summary>
 public static class SafePathBuilder
 {
+    /// <summary>
+    /// Characters that are unsafe in a file name on ANY supported platform.
+    /// <para>
+    /// <see cref="Path.GetInvalidFileNameChars"/> is platform-specific: on macOS and Linux it
+    /// returns only NUL and '/'. Relying on it would let a name containing '?' or ':' be
+    /// written on macOS and then be impossible to open on Windows. Exports must be portable,
+    /// so a fixed union is used instead of the host's own set.
+    /// </para>
+    /// </summary>
+    public static readonly char[] PortableInvalidFileNameChars =
+        ['"', '*', ':', '<', '>', '?', '/', '\\', '|', '\0'];
+
     /// <summary>Windows reserved device names, which are unsafe even with an extension.</summary>
     private static readonly string[] ReservedDeviceNames =
     [
@@ -139,7 +151,10 @@ public static class SafePathBuilder
             return fallback;
         }
 
-        var invalid = Path.GetInvalidFileNameChars();
+        var invalid = PortableInvalidFileNameChars
+            .Concat(Path.GetInvalidFileNameChars())
+            .ToArray();
+
         var cleaned = new string(name.Select(c =>
             Array.IndexOf(invalid, c) >= 0 || char.IsControl(c) ? '_' : c).ToArray());
 

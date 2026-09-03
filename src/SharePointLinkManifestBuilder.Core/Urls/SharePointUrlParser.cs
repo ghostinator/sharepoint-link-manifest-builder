@@ -137,6 +137,14 @@ public static class SharePointUrlParser
 
         path = path.TrimEnd('/');
 
+        // A bare "/sites", "/teams" or "/personal" names no site. Trimming the trailing slash
+        // makes it look like an ordinary root-relative path, so reject it explicitly.
+        if (SitePrefixes.Any(p => string.Equals(path, p.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)))
+        {
+            return ParsedResourceUrl.Invalid(
+                original, $"The URL is missing a site name after '{path.TrimStart('/')}'.");
+        }
+
         var prefix = SitePrefixes.FirstOrDefault(p =>
             path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
 
