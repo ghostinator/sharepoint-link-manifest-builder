@@ -98,6 +98,18 @@ jobs:
   codeql:
     name: CodeQL
     runs-on: ubuntu-latest
+
+    # CodeQL analysis runs fine on a private repository, but UPLOADING results requires GitHub
+    # Advanced Security, which is a paid add-on for private repos and free for public ones.
+    # Without it the upload returns 403 and fails the whole Security workflow for a billing
+    # reason rather than a code one.
+    #
+    # Gating on visibility is preferred over continue-on-error: that would also swallow a
+    # genuine CodeQL failure, turning a security check into decoration. This way the job is
+    # cleanly skipped while private, and starts running the moment the repository is made
+    # public, with no edit required.
+    if: github.event.repository.visibility == 'public'
+
     permissions:
       contents: read
       security-events: write

@@ -79,6 +79,12 @@ git push -u origin main
 
 1. **Settings → Security** — enable secret scanning, push protection, Dependabot alerts and
    Dependabot security updates.
+
+   **CodeQL is skipped while the repository is private.** Analysis runs, but uploading results
+   needs GitHub Advanced Security, a paid add-on for private repositories and free for public
+   ones. The `codeql` job is conditioned on `visibility == 'public'`, so it begins running
+   automatically when the repository is made public — no workflow edit needed. The rest of the
+   Security workflow (publication safety scan, dependency audit, SBOM) runs either way.
 2. **Settings → Security → Advisories** — enable private vulnerability reporting, which
    `SECURITY.md` points at.
 3. **Settings → Actions** — confirm the workflows appear and pass. The `workflow` token scope is

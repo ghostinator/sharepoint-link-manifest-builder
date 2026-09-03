@@ -50,6 +50,7 @@ tenant to verify · ❌ not done
 | 41 | GitHub-ready workflows | ✅ | 5 workflows, actions pinned to verified SHAs |
 | 42 | Publication safety scan exists | ✅ | `scripts/scan-secrets.sh`; verified against planted secrets |
 | 43 | CI uses no live-tenant credentials | ✅ | No secret referenced in any workflow |
+| 43a | CodeQL | ⚠️ | Configured and verified to analyse all 110 C# files; result upload needs GitHub Advanced Security, so the job is gated on the repository being public |
 | 44 | Cross-platform packages configured | ⚠️ | Scripts and workflow for 6 RIDs; only `osx-arm64` built on this machine |
 | 45 | Rollback documented | ✅ | `docs/ROLLBACK.md` |
 | 46 | Another organization can follow the documentation | ✅ | `docs/ENTRA-SETUP.md`, `docs/ADMIN-GUIDE.md`; no tenant-specific values |
