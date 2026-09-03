@@ -7,6 +7,49 @@ it lets a maintainer, or Microsoft support, trace the exact request.
 
 ## Sign-in and consent
 
+### The browser said "authentication complete", but the application reports a failure
+
+**This is expected, and it does not mean the sign-in nearly worked.** MSAL renders its
+"authentication complete" page as soon as *any* redirect arrives back from Microsoft Entra —
+including a redirect that carries an error. The page looks identical either way, so it tells you
+only that the browser round-trip finished, not that it succeeded.
+
+The application logs the real cause and shows the Microsoft error code in the message. Look for
+`Microsoft error code: AADSTSnnnnn`, or open the log file (Settings, then **Open data folder**,
+then `logs/application.log`) and find the most recent line beginning `Could not sign in.`
+
+| Code | Cause | Fix |
+| --- | --- | --- |
+| `AADSTS7000218` | The registration is not a public client, so Entra demanded a client secret. | In the registration, open **Authentication**, set *Allow public client flows* to **Yes**, and make sure `http://localhost` is registered under **Mobile and desktop applications**, not **Web**. Do **not** create a client secret — this application has none by design. |
+| `AADSTS50011`, `AADSTS900971` | The loopback redirect URI is not registered. | Add `http://localhost` under **Mobile and desktop applications**. No port is needed; loopback redirects match on any port. |
+| `AADSTS50020` | The account belongs to a different organization than the registration accepts. | Sign in with an account in the configured organization, or turn on multi-organization mode (see below). |
+| `AADSTS700016`, `AADSTS90002` | The registration does not exist in the organization signed in to. | Check the client ID, and confirm the organization. A single-organization registration cannot be used from another organization. |
+| `AADSTS65001` | Consent has not been granted. | Use **Request Missing Consent** and have an administrator approve it. |
+
+The single most common cause is the first row: adding the redirect URI under the **Web** platform
+instead of **Mobile and desktop applications**. Entra then treats the application as a
+confidential client and requires a secret at the token-exchange step, which happens *after* the
+browser has already reported success.
+
+### Using one installation across several organizations
+
+Turn on **This registration works with any work or school organization** on the sign-in page of
+the setup wizard. The Directory (tenant) ID then becomes optional: the organization is taken from
+whichever account you sign in with.
+
+This requires the app registration itself to be set to **Accounts in any organizational
+directory** (`AzureADMultipleOrgs`) in Microsoft Entra. That cannot be changed after the
+registration is created through this application's automatic setup, because changing it requires
+a far broader permission than the create-only tier this product asks for. If you already have a
+single-organization registration, either change it in the Entra portal or create a new one.
+
+Once it is on, the home page lists every organization signed in on this device, and selecting one
+switches the whole application to it. Switching is silent when the cached token is still valid.
+
+**Each organization consents separately.** Consent in one organization grants nothing in another.
+Personal Microsoft accounts are not supported at all, because they have no SharePoint or OneDrive
+for Business.
+
 ### "An authorized Microsoft Entra administrator must approve the requested permissions"
 
 The permissions need administrator consent and you are not an administrator, or your tenant
@@ -22,6 +65,9 @@ You are signed into more than one directory and picked the wrong one.
 
 **What to do.** Sign in again and select an account in the tenant shown in the wizard. This is a
 deliberate refusal: accepting a token from another tenant would be a cross-tenant data risk.
+
+If you genuinely need to work across several organizations, turn on multi-organization mode
+rather than working around this check.
 
 ### "The consent response could not be verified and was rejected"
 

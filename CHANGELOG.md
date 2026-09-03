@@ -9,6 +9,34 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Optional multi-organization mode. One installation can now be used across several Microsoft
+  365 organizations with a registration set to *Accounts in any organizational directory*,
+  using the `/organizations` authority. Never `/common`, which would also admit personal
+  Microsoft accounts. Default behaviour is unchanged and remains single-organization. See
+  [ADR-0011](docs/adr/0011-multi-tenant-authority.md).
+- Organization switcher on the home page, listing every organization signed in on this device.
+  Switching is silent when the cached token is still valid, and prompts only when the target
+  organization has not consented yet.
+- Administrator-consent requests now name an explicit organization even in multi-organization
+  mode, and are refused rather than guessed when the organization is not yet known.
+
+### Fixed
+
+- **Sign-in failures were undiagnosable.** MSAL exceptions were normalized into a sanitized
+  user-facing error without being logged first, so the OAuth error code, the `AADSTSnnnnn`
+  code and the correlation ID were all discarded. Any unclassified failure became the single
+  sentence "Microsoft Entra refused the request to sign in", with nothing in the log. The full
+  diagnostic is now logged before normalization, and the Microsoft error code is shown in the
+  message.
+- Classified the failures that occur *after* the browser displays "authentication complete":
+  a registration that is not a public client (`AADSTS7000218`), an unregistered loopback
+  redirect (`AADSTS50011`, `AADSTS900971`), an account from another organization
+  (`AADSTS50020`), and a registration missing from the signed-in organization
+  (`AADSTS700016`, `AADSTS90002`). Each now names its own remedy instead of falling through to
+  a generic message.
+
+### Added
+
 - Cross-platform Avalonia desktop application for Windows, macOS and Linux.
 - Graphical first-run setup wizard with eight pages: welcome, method, sign-in, permission
   review, provisioning, consent, verification and completion.

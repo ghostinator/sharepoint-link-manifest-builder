@@ -165,6 +165,52 @@ public sealed class ConnectionCoordinator
         return result;
     }
 
+    /// <summary>
+    /// Accounts cached on this device, for the organization switcher. For a multi-organization
+    /// configuration these can span several organizations.
+    /// </summary>
+    public Task<IReadOnlyList<UserAccount>> GetCachedAccountsAsync(
+        CancellationToken cancellationToken = default) =>
+        _authentication.GetCachedAccountsAsync(cancellationToken);
+
+    /// <summary>
+    /// Activates an already-cached account, which is how switching organizations becomes a
+    /// single click. Silent when the cached refresh token still works, and interactive only
+    /// when the target organization has not consented yet.
+    /// </summary>
+    public async Task<AuthenticationResultInfo> SwitchAccountAsync(
+        string homeAccountId,
+        CancellationToken cancellationToken = default)
+    {
+        if (Tenant is null)
+        {
+            return new AuthenticationResultInfo
+            {
+                Succeeded = false,
+                Error = new GraphError
+                {
+                    Kind = GraphErrorKind.AuthenticationFailed,
+                    Message = "No Microsoft 365 tenant is configured yet.",
+                    SuggestedAction = "Run the setup wizard from Tenant Setup.",
+                },
+            };
+        }
+
+        var result = await _authentication
+            .SwitchToAccountAsync(homeAccountId, Tenant.RequiredScopes, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (result.Succeeded)
+        {
+            // Re-resolves the organization name and re-raises the change event, so every browser
+            // and selector in the application repopulates against the new organization rather
+            // than showing stale data from the previous one.
+            await OnSignedInAsync(result, cancellationToken).ConfigureAwait(false);
+        }
+
+        return result;
+    }
+
     /// <summary>Signs out and clears the resolved tenant name.</summary>
     public async Task SignOutAsync(CancellationToken cancellationToken = default)
     {

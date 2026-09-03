@@ -44,6 +44,21 @@ public sealed partial class HomeViewModel : PageViewModelBase
     /// <summary>Locations used recently.</summary>
     public ObservableCollection<RecentLocation> RecentLocations { get; } = [];
 
+    /// <summary>
+    /// Accounts cached on this device. For a multi-organization configuration these can span
+    /// several organizations, and selecting one switches the whole application to it.
+    /// </summary>
+    public ObservableCollection<UserAccount> AvailableAccounts { get; } = [];
+
+    /// <summary>True when this configuration accepts more than one organization.</summary>
+    public bool IsMultiOrganization => _connection.Tenant?.IsMultiTenant == true;
+
+    /// <summary>True when there is a switcher worth showing.</summary>
+    public bool CanSwitchOrganization => IsMultiOrganization && AvailableAccounts.Count > 0;
+
+    /// <summary>The home account ID of the account currently in use, for selection state.</summary>
+    public string? ActiveHomeAccountId => _connection.Account?.HomeAccountId;
+
     /// <summary>The current connection state.</summary>
     public ConnectionState State => _connection.State;
 
@@ -125,6 +140,27 @@ public sealed partial class HomeViewModel : PageViewModelBase
         {
             RecentLocations.Add(location);
         }
+
+        await RefreshAccountsAsync(cancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Reloads the cached-account list behind the organization switcher.</summary>
+    private async Task RefreshAccountsAsync(CancellationToken cancellationToken)
+    {
+        AvailableAccounts.Clear();
+
+        if (_connection.Tenant is null)
+        {
+            RaiseAccountState();
+            return;
+        }
+
+        foreach (var account in await _connection.GetCachedAccountsAsync(cancellationToken).ConfigureAwait(true))
+        {
+            AvailableAccounts.Add(account);
+        }
+
+        RaiseAccountState();
     }
 
     /// <summary>Signs in through the system browser.</summary>
@@ -150,8 +186,87 @@ public sealed partial class HomeViewModel : PageViewModelBase
         }
     }
 
+    /// <summary>
+    /// Switches to another cached account in one gesture. Silent when that organization's
+    /// refresh token is still valid; otherwise it prompts, because consent is per-organization.
+    /// </summary>
+    [RelayCommand]
+    private async Task SwitchAccountAsync(UserAccount? account, CancellationToken cancellationToken)
+    {
+        if (account?.HomeAccountId is not { Length: > 0 } homeAccountId)
+        {
+            return;
+        }
+
+        if (string.Equals(homeAccountId, ActiveHomeAccountId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        IsBusy = true;
+        ClearMessages();
+
+        try
+        {
+            var result = await _connection
+                .SwitchAccountAsync(homeAccountId, cancellationToken)
+                .ConfigureAwait(true);
+
+            if (result.Succeeded)
+            {
+                StatusMessage = $"Now working in {result.Account?.TenantId} as "
+                    + $"{result.Account?.UserPrincipalName}.";
+            }
+            else
+            {
+                ErrorMessage = result.Error?.Message;
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+            await RefreshAccountsAsync(cancellationToken).ConfigureAwait(true);
+            RaiseAll();
+        }
+    }
+
+    /// <summary>
+    /// Adds another organization by signing in interactively. The existing accounts stay
+    /// cached, so switching back afterwards is silent.
+    /// </summary>
+    [RelayCommand]
+    private async Task AddOrganizationAsync(CancellationToken cancellationToken)
+    {
+        IsBusy = true;
+        ClearMessages();
+
+        try
+        {
+            var result = await _connection.SignInAsync(cancellationToken).ConfigureAwait(true);
+
+            if (!result.Succeeded)
+            {
+                ErrorMessage = result.Error?.Message;
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+            await RefreshAccountsAsync(cancellationToken).ConfigureAwait(true);
+            RaiseAll();
+        }
+    }
+
+    private void RaiseAccountState()
+    {
+        OnPropertyChanged(nameof(IsMultiOrganization));
+        OnPropertyChanged(nameof(CanSwitchOrganization));
+        OnPropertyChanged(nameof(ActiveHomeAccountId));
+    }
+
     private void RaiseAll()
     {
+        RaiseAccountState();
         OnPropertyChanged(nameof(State));
         OnPropertyChanged(nameof(ConnectionSummary));
         OnPropertyChanged(nameof(IsConnected));

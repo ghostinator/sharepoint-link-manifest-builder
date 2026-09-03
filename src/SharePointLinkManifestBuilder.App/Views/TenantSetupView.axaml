@@ -113,9 +113,16 @@
           <TextBlock Classes="Body"
                      Text="Sign-in opens in your normal web browser so multi-factor authentication and Conditional Access work exactly as your organization configured them. This application never sees your password." />
 
+          <CheckBox IsChecked="{Binding UseAnyOrganization}"
+                    Content="This registration works with any work or school organization"
+                    AutomationProperties.Name="Use any work or school organization" />
+          <TextBlock Classes="Subtle" TextWrapping="Wrap"
+                     Text="Turn this on to use one app registration across several organizations, for example as a consultant or managed service provider. The registration itself must be set to 'Accounts in any organizational directory' in Microsoft Entra. Each organization still consents separately; consent in one never grants access to another. Personal Microsoft accounts are not supported, because they have no SharePoint or OneDrive for Business." />
+
           <TextBlock Text="Directory (tenant) ID" Classes="SectionTitle" />
           <TextBox Text="{Binding TenantId}" PlaceholderText="00000000-0000-0000-0000-000000000000"
                    AutomationProperties.Name="Directory tenant ID" />
+          <TextBlock Classes="Subtle" TextWrapping="Wrap" Text="{Binding TenantIdHint}" />
 
           <StackPanel Spacing="4"
                       IsVisible="{Binding Method, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=ExistingRegistration}">

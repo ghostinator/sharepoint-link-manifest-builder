@@ -20,6 +20,21 @@ public enum GraphErrorKind
     TenantMismatch,
     TokenExpired,
 
+    // Registration/authority misconfiguration. These all surface *after* the browser has
+    // rendered its "authentication complete" page, because MSAL shows that page as soon as the
+    // redirect arrives, whether or not the redirect carries an error.
+    /// <summary>The registration is not marked as a public client, so Entra demanded a secret.</summary>
+    PublicClientNotConfigured,
+
+    /// <summary>The loopback redirect URI is not registered, or not registered as native.</summary>
+    RedirectUriMismatch,
+
+    /// <summary>The account signed in belongs to an organization the registration does not accept.</summary>
+    AccountFromUnsupportedTenant,
+
+    /// <summary>The registration does not exist in the organization that was signed in to.</summary>
+    ApplicationNotFoundInTenant,
+
     // Registration
     RegistrationCreationBlocked,
     InsufficientPrivilegesToCreateApplication,

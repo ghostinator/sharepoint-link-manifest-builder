@@ -184,19 +184,32 @@ public interface IConsentService
     /// <param name="permissions">Permissions to request.</param>
     /// <param name="redirectUri">A registered redirect URI.</param>
     /// <param name="state">Random state, validated on return.</param>
+    /// <param name="targetTenantId">
+    /// The organization to request consent in. Optional: a single-organization configuration
+    /// uses its own tenant, and a multi-organization one uses the signed-in organization. The
+    /// URL always names one explicit organization, never <c>/organizations</c>.
+    /// </param>
     Uri BuildAdminConsentUrl(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> permissions,
         string redirectUri,
-        string state);
+        string state,
+        string? targetTenantId = null);
 
     /// <summary>
     /// Opens the official consent experience in the system browser and awaits the redirect,
     /// validating both state and the returned tenant.
     /// </summary>
+    /// <param name="tenantConfiguration">Tenant and client to request consent for.</param>
+    /// <param name="permissions">Permissions to request.</param>
+    /// <param name="targetTenantId">
+    /// The organization to request consent in. Optional; see <see cref="BuildAdminConsentUrl"/>.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     Task<ConsentOutcome> RequestAdminConsentAsync(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> permissions,
+        string? targetTenantId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

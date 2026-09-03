@@ -234,6 +234,47 @@ public sealed class FakeAuthenticationService : IAuthenticationService
         });
     }
 
+    /// <summary>Accounts the fake reports as cached, for account-switcher tests.</summary>
+    public List<UserAccount> CachedAccounts { get; } = [];
+
+    /// <summary>The home account ID passed to the last switch, for assertions.</summary>
+    public string? LastSwitchedTo { get; private set; }
+
+    /// <inheritdoc />
+    public Task<AuthenticationResultInfo> SwitchToAccountAsync(
+        string homeAccountId,
+        IEnumerable<string> scopes,
+        CancellationToken cancellationToken = default)
+    {
+        LastSwitchedTo = homeAccountId;
+
+        var match = CachedAccounts.FirstOrDefault(a =>
+            string.Equals(a.HomeAccountId, homeAccountId, StringComparison.Ordinal));
+
+        if (match is null)
+        {
+            return Task.FromResult(new AuthenticationResultInfo
+            {
+                Succeeded = false,
+                Error = new GraphError
+                {
+                    Kind = GraphErrorKind.AuthenticationFailed,
+                    Message = "That account is no longer cached on this device.",
+                },
+            });
+        }
+
+        CurrentAccount = match;
+        AccountChanged?.Invoke(this, match);
+
+        return Task.FromResult(new AuthenticationResultInfo
+        {
+            Succeeded = true,
+            Account = match,
+            GrantedScopes = GrantedScopes,
+        });
+    }
+
     /// <inheritdoc />
     public Task<AuthenticationResultInfo> AcquireTokenAsync(
         IEnumerable<string> scopes,

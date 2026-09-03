@@ -255,7 +255,7 @@ public sealed partial class PermissionsViewModel : PageViewModelBase
                 .ToArray();
 
             var outcome = await _consentService
-                .RequestAdminConsentAsync(tenant, required, cancellationToken)
+                .RequestAdminConsentAsync(tenant, required, cancellationToken: cancellationToken)
                 .ConfigureAwait(true);
 
             StatusMessage = outcome.Approved

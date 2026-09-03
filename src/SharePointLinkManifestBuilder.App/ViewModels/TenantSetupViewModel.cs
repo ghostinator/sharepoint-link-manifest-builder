@@ -89,6 +89,16 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     [ObservableProperty]
     private string _existingClientId = string.Empty;
 
+    /// <summary>
+    /// True when the registration accepts any work or school organization. This makes the
+    /// Directory (tenant) ID optional, because the organization is whichever one the user signs
+    /// in to rather than one fixed at setup time.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TenantIdIsRequired))]
+    [NotifyPropertyChangedFor(nameof(TenantIdHint))]
+    private bool _useAnyOrganization;
+
     /// <summary>Display name proposed for a registration this application creates.</summary>
     [ObservableProperty]
     private string _proposedApplicationName = "SharePoint Link Manifest Builder";
@@ -128,6 +138,18 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     /// <summary>The client ID of the registration in use once setup completes.</summary>
     [ObservableProperty]
     private string? _resultingClientId;
+
+    /// <summary>
+    /// True when the Directory (tenant) ID must be supplied. A multi-organization registration
+    /// does not need one up front: the organization is resolved from the token at sign-in.
+    /// </summary>
+    public bool TenantIdIsRequired => !UseAnyOrganization;
+
+    /// <summary>Guidance shown beside the Directory (tenant) ID field.</summary>
+    public string TenantIdHint => UseAnyOrganization
+        ? "Optional. Leave this blank and the organization will be taken from the account you "
+          + "sign in with. Supply one only to pre-select a specific organization."
+        : "Required. The Directory (tenant) ID GUID shown on the Microsoft Entra overview page.";
 
     /// <summary>Creates the wizard.</summary>
     public TenantSetupViewModel(
@@ -336,9 +358,19 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
             return;
         }
 
-        if (!Guid.TryParse(TenantId.Trim(), out _))
+        if (TenantIdIsRequired && !Guid.TryParse(TenantId.Trim(), out _))
         {
             ErrorMessage = "Enter your Directory (tenant) ID. It is a GUID, shown on the Entra overview page.";
+            return;
+        }
+
+        if (!TenantIdIsRequired
+            && TenantId.Trim() is { Length: > 0 } typedTenant
+            && !Guid.TryParse(typedTenant, out _))
+        {
+            ErrorMessage = "The Directory (tenant) ID is optional for a multi-organization "
+                + "registration, but if you supply one it must be a GUID.";
+
             return;
         }
 
@@ -349,6 +381,7 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
             var configuration = new TenantConfiguration
             {
                 TenantId = TenantId.Trim(),
+                Audience = UseAnyOrganization ? TenantAudience.AnyOrganization : TenantAudience.SingleTenant,
                 ClientId = clientId,
                 RequiredScopes = RequestedPermissions.Select(p => p.Scope).ToArray(),
                 Source = Method == SetupMethod.Automatic
@@ -372,6 +405,16 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
             }
 
             SignedInAccount = result.Account;
+
+            // For a multi-organization registration the organization is discovered, not typed.
+            // Recording it here is what lets the consent step name an explicit directory.
+            if (UseAnyOrganization
+                && result.Account?.TenantId is { Length: > 0 } discovered
+                && !string.Equals(TenantId.Trim(), discovered, StringComparison.OrdinalIgnoreCase))
+            {
+                TenantId = discovered;
+            }
+
             StatusMessage = $"Signed in as {result.Account?.DisplayName} in tenant {result.Account?.TenantId}.";
         }
         finally
@@ -402,6 +445,7 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
             var configuration = new AppRegistrationConfiguration
             {
                 DisplayName = ProposedApplicationName.Trim(),
+                Audience = UseAnyOrganization ? TenantAudience.AnyOrganization : TenantAudience.SingleTenant,
                 RequestedPermissions = RequestedPermissions.ToArray(),
             };
 
@@ -466,7 +510,10 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
         try
         {
             var outcome = await _consentService
-                .RequestAdminConsentAsync(tenant, RequestedPermissions.ToArray(), cancellationToken)
+                .RequestAdminConsentAsync(
+                    tenant,
+                    RequestedPermissions.ToArray(),
+                    cancellationToken: cancellationToken)
                 .ConfigureAwait(true);
 
             await _auditStore.AppendAsync(new RegistrationAuditEntry
@@ -704,6 +751,7 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
         var configuration = new AppRegistrationConfiguration
         {
             DisplayName = ProposedApplicationName,
+            Audience = UseAnyOrganization ? TenantAudience.AnyOrganization : TenantAudience.SingleTenant,
             RequestedPermissions = permissions,
         };
 
@@ -726,12 +774,24 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     private static string LoopbackState() =>
         Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
 
-    private static string Describe(GraphError? error) =>
-        error is null
-            ? "The operation did not succeed."
-            : error.SuggestedAction is { Length: > 0 } action
-                ? $"{error.Message} {action}"
-                : error.Message;
+    private static string Describe(GraphError? error)
+    {
+        if (error is null)
+        {
+            return "The operation did not succeed.";
+        }
+
+        var text = error.SuggestedAction is { Length: > 0 } action
+            ? $"{error.Message} {action}"
+            : error.Message;
+
+        // The Microsoft error code is included deliberately. It is the difference between a
+        // failure the user can look up or hand to an administrator and one they can only guess
+        // at, and it identifies no person, tenant, or resource.
+        return error.GraphErrorCode is { Length: > 0 } code
+            ? $"{text} (Microsoft error code: {code})"
+            : text;
+    }
 
     private void RaisePageChanged()
     {

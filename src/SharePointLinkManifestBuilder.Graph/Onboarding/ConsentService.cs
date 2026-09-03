@@ -38,21 +38,59 @@ public sealed class ConsentService : IConsentService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <summary>
+    /// Determines which directory consent must be requested in.
+    /// <para>
+    /// A single-tenant configuration always names its own tenant. A multi-tenant one has no
+    /// statically configured tenant, so the directory to consent in is the one the user is
+    /// currently signed in to. Returns null when that cannot be determined, which callers must
+    /// treat as "sign in first" rather than falling back to <c>/organizations</c>: an explicit
+    /// tenant in the consent URL is precisely what stops an administrator who is signed into
+    /// several directories from consenting in the wrong one.
+    /// </para>
+    /// </summary>
+    internal static string? ResolveConsentTenantId(
+        TenantConfiguration tenantConfiguration,
+        string? explicitTenantId,
+        UserAccount? signedInAccount)
+    {
+        if (!string.IsNullOrWhiteSpace(explicitTenantId))
+        {
+            return explicitTenantId.Trim();
+        }
+
+        if (!tenantConfiguration.IsMultiTenant)
+        {
+            return string.IsNullOrWhiteSpace(tenantConfiguration.TenantId)
+                ? null
+                : tenantConfiguration.TenantId;
+        }
+
+        return string.IsNullOrWhiteSpace(signedInAccount?.TenantId) ? null : signedInAccount.TenantId;
+    }
+
     /// <inheritdoc />
     public Uri BuildAdminConsentUrl(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> permissions,
         string redirectUri,
-        string state)
+        string state,
+        string? targetTenantId = null)
     {
         ArgumentNullException.ThrowIfNull(tenantConfiguration);
         ArgumentNullException.ThrowIfNull(permissions);
         ArgumentException.ThrowIfNullOrWhiteSpace(redirectUri);
         ArgumentException.ThrowIfNullOrWhiteSpace(state);
 
-        // The tenant-specific /v2.0/adminconsent endpoint. Using the tenant ID rather than
-        // /common or /organizations is what keeps an administrator from accidentally consenting
-        // in a different directory than the one being configured.
+        var tenantId = ResolveConsentTenantId(
+            tenantConfiguration, targetTenantId, _authentication.CurrentAccount)
+            ?? throw new InvalidOperationException(
+                "The directory to request consent in could not be determined. Sign in first so the "
+                + "consent request names an explicit organization.");
+
+        // The tenant-specific /v2.0/adminconsent endpoint. Naming the tenant explicitly rather
+        // than using /common or /organizations is what keeps an administrator from accidentally
+        // consenting in a different directory than the one being configured.
         var scope = GraphScopes.ToQualifiedScopeParameter(permissions, tenantConfiguration.GraphEndpoint);
 
         var query = string.Join('&',
@@ -64,26 +102,46 @@ public sealed class ConsentService : IConsentService
         ]);
 
         var instance = tenantConfiguration.Instance.TrimEnd('/');
-        return new Uri($"{instance}/{tenantConfiguration.TenantId}/v2.0/adminconsent?{query}");
+        return new Uri($"{instance}/{tenantId}/v2.0/adminconsent?{query}");
     }
 
     /// <inheritdoc />
     public async Task<ConsentOutcome> RequestAdminConsentAsync(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> permissions,
+        string? targetTenantId = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tenantConfiguration);
         ArgumentNullException.ThrowIfNull(permissions);
 
+        var expectedTenantId = ResolveConsentTenantId(
+            tenantConfiguration, targetTenantId, _authentication.CurrentAccount);
+
+        if (expectedTenantId is null)
+        {
+            return new ConsentOutcome
+            {
+                Approved = false,
+                Error = new GraphError
+                {
+                    Kind = GraphErrorKind.TenantMismatch,
+                    Message = "The organization to request consent in is not known yet.",
+                    SuggestedAction = "Sign in first. Consent is always requested in one named "
+                        + "organization so it cannot be granted in the wrong directory.",
+                },
+            };
+        }
+
         var state = LoopbackRedirectListener.GenerateState();
 
         using var listener = new LoopbackRedirectListener(_logger);
-        var url = BuildAdminConsentUrl(tenantConfiguration, permissions, listener.RedirectUri, state);
+        var url = BuildAdminConsentUrl(
+            tenantConfiguration, permissions, listener.RedirectUri, state, expectedTenantId);
 
         _logger.LogInformation(
             "Opening Microsoft's administrator consent experience in the system browser for tenant {TenantId}.",
-            tenantConfiguration.TenantId);
+            expectedTenantId);
 
         await _browser.OpenAsync(url, cancellationToken).ConfigureAwait(false);
 
@@ -120,7 +178,7 @@ public sealed class ConsentService : IConsentService
         // Guard against an administrator consenting in the wrong directory, which is easy to do
         // when signed into several.
         if (!string.IsNullOrEmpty(redirect.TenantId)
-            && !string.Equals(redirect.TenantId, tenantConfiguration.TenantId, StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(redirect.TenantId, expectedTenantId, StringComparison.OrdinalIgnoreCase))
         {
             return new ConsentOutcome
             {

@@ -89,9 +89,21 @@ In the Microsoft Entra admin center:
 
 1. **App registrations -> New registration**
 2. **Name:** anything your organization prefers.
-3. **Supported account types:** *Accounts in this organizational directory only* (single tenant).
+3. **Supported account types:**
+   - *Accounts in this organizational directory only* (single tenant) for normal use, or
+   - *Accounts in any organizational directory* (`AzureADMultipleOrgs`) to use one installation
+     across several organizations — see section 4a.
+
+   Do **not** choose an option that includes personal Microsoft accounts. They have no
+   SharePoint or OneDrive for Business, so they can only fail later and less clearly.
 4. **Redirect URI:** select **Public client/native (mobile & desktop)** and enter
    `http://localhost`.
+
+   > This choice matters more than it looks. Registering `http://localhost` under the **Web**
+   > platform instead makes Entra treat the application as a *confidential* client and demand a
+   > client secret at the token-exchange step. Sign-in then fails with `AADSTS7000218` **after**
+   > the browser has already displayed "authentication complete". This application has no client
+   > secret by design and must never be given one.
 5. **Register.**
 6. **Authentication ->** confirm *Allow public client flows* is **Yes**.
 7. **API permissions -> Add a permission -> Microsoft Graph -> Delegated permissions**, add:
@@ -118,6 +130,40 @@ az ad app create \
 ```
 
 ---
+
+---
+
+## 4a. Using one registration across several organizations
+
+For a consultant or managed service provider working in several customer tenants.
+
+1. Create the registration as in section 4, choosing **Accounts in any organizational
+   directory** at step 3.
+2. In the application, on the sign-in page of the setup wizard, tick **This registration works
+   with any work or school organization**. The Directory (tenant) ID becomes optional.
+3. Sign in with an account in the first organization. The organization is read from the token.
+4. Use **Add organization** on the home page to sign in to further organizations. They are
+   listed there, and selecting one switches the whole application to it.
+
+Things to know before choosing this:
+
+- **Each organization consents separately.** A multi-tenant registration is not pre-approved
+  anywhere. The first sign-in in each new organization triggers its own consent, and an
+  administrator of *that* organization must approve anything requiring admin consent. Consent in
+  one organization grants nothing in another.
+- **Consent is always requested against a named organization.** The application never sends an
+  administrator to a `/organizations` consent URL, because an administrator signed into several
+  directories could then consent in the wrong one. If the organization is not yet known, the
+  application asks you to sign in first rather than guessing.
+- **The audience cannot be changed later by this application.** Switching an existing
+  registration between single- and multi-organization is a `PATCH` on the application object,
+  which requires `Application.ReadWrite.All` — much broader than the create-only permission this
+  product requests. Change it in the Entra portal, or create a second registration.
+- **Every organization you connect to is cached locally.** Use *Forget account* or *Clear token
+  cache* in Settings to remove them.
+
+The authority used is `https://login.microsoftonline.com/organizations`, never `/common`. See
+[ADR-0011](adr/0011-multi-tenant-authority.md).
 
 ## 5. Administrator consent
 
