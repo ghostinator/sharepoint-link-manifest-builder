@@ -1,0 +1,108 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Shared visual language. Everything here is expressed in relative units and theme resources
+    so the application honours the OS light/dark preference, scales with the user's text size,
+    and stays legible at high DPI.
+  -->
+
+  <Style Selector="TextBlock.PageTitle">
+    <Setter Property="FontSize" Value="22" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="0,0,0,4" />
+  </Style>
+
+  <Style Selector="TextBlock.SectionTitle">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="0,12,0,6" />
+  </Style>
+
+  <Style Selector="TextBlock.Subtle">
+    <Setter Property="Opacity" Value="0.75" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="TextBlock.Body">
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="LineHeight" Value="20" />
+  </Style>
+
+  <Style Selector="Border.Card">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="16" />
+    <Setter Property="Margin" Value="0,0,0,12" />
+  </Style>
+
+  <!-- Advisory. Also carries a text label in the view, never colour alone. -->
+  <Style Selector="Border.Notice">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="BorderThickness" Value="1,1,1,1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12" />
+    <Setter Property="Margin" Value="0,0,0,12" />
+  </Style>
+
+  <!-- Requires attention. Paired with a "Warning:" prefix in the text. -->
+  <Style Selector="Border.Warning">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="BorderBrush" Value="DarkOrange" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12" />
+    <Setter Property="Margin" Value="0,0,0,12" />
+  </Style>
+
+  <!-- Destructive or blocking. Paired with an "Error:" prefix in the text. -->
+  <Style Selector="Border.Danger">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="BorderBrush" Value="IndianRed" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12" />
+    <Setter Property="Margin" Value="0,0,0,12" />
+  </Style>
+
+  <Style Selector="Button.Primary">
+    <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Button.Destructive">
+    <Setter Property="Background" Value="IndianRed" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Padding" Value="12,6" />
+  </Style>
+
+  <!-- A visible focus ring on every focusable control: keyboard users must always be able to
+       see where they are, which the default theme does not guarantee at all contrast levels. -->
+  <Style Selector=":is(Control):focus-visible">
+    <Setter Property="FocusAdorner">
+      <FocusAdornerTemplate>
+        <Border BorderBrush="{DynamicResource SystemAccentColor}"
+                BorderThickness="2"
+                CornerRadius="4"
+                Margin="-2" />
+      </FocusAdornerTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="TextBlock.Mono">
+    <Setter Property="FontFamily" Value="Consolas, Menlo, 'DejaVu Sans Mono', monospace" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="StackPanel.FormRow">
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="Spacing" Value="8" />
+    <Setter Property="Margin" Value="0,4" />
+  </Style>
+</Styles>

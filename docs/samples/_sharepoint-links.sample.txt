@@ -1,0 +1,47 @@
+SharePoint Link Manifest
+Schema Version: 1.0
+Application Version: 0.1.0
+Job ID: 6f1c2a9d4b8e47f0a1c3d5e7f9012345
+Generated: 2026-09-02T14:15:30Z
+Tenant: Contoso Ltd
+Tenant ID: 00000000-0000-0000-0000-000000000000
+Source Type: Document Library
+Site: Marketing
+Site URL: https://contoso.sharepoint.com/sites/Marketing
+Document Library or Drive: Documents
+Starting Folder: /Reports
+Recursive: Yes
+Link Permission: View
+Link Audience: Organization
+Successful Files: 3
+Reused Links: 1
+Skipped Files: 2
+Failed Files: 0
+
+File: Q1 Summary.docx
+Relative Path: Reports/Q1 Summary.docx
+Web URL: https://contoso.sharepoint.com/sites/Marketing/Shared%20Documents/Reports/Q1%20Summary.docx
+Sharing Link: https://contoso.sharepoint.com/:w:/s/Marketing/EXAMPLE-PLACEHOLDER-LINK-1
+Drive ID: b!EXAMPLE-PLACEHOLDER-DRIVE-ID
+Item ID: 01EXAMPLEPLACEHOLDERITEMID1
+Status: Created
+Generated: 2026-09-02T14:15:31Z
+---
+File: Q1 Budget.xlsx
+Relative Path: Reports/Q1 Budget.xlsx
+Web URL: https://contoso.sharepoint.com/sites/Marketing/Shared%20Documents/Reports/Q1%20Budget.xlsx
+Sharing Link: https://contoso.sharepoint.com/:x:/s/Marketing/EXAMPLE-PLACEHOLDER-LINK-2
+Drive ID: b!EXAMPLE-PLACEHOLDER-DRIVE-ID
+Item ID: 01EXAMPLEPLACEHOLDERITEMID2
+Status: Reused
+Generated: 2026-09-02T14:15:32Z
+---
+File: Campaign Brief.pdf
+Relative Path: Reports/Archive/Campaign Brief.pdf
+Web URL: https://contoso.sharepoint.com/sites/Marketing/Shared%20Documents/Reports/Archive/Campaign%20Brief.pdf
+Sharing Link: https://contoso.sharepoint.com/:b:/s/Marketing/EXAMPLE-PLACEHOLDER-LINK-3
+Drive ID: b!EXAMPLE-PLACEHOLDER-DRIVE-ID
+Item ID: 01EXAMPLEPLACEHOLDERITEMID3
+Status: Created
+Generated: 2026-09-02T14:15:33Z
+---

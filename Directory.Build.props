@@ -46,10 +46,16 @@
     Everything else is escalated to an error in CI via -warnaserror.
   -->
   <PropertyGroup>
-    <!-- CA1848: LoggerMessage source generators are used on hot paths only. -->
+    <!-- CS1591: every public TYPE and every INTERFACE MEMBER carries XML documentation.
+                 Self-describing DTO properties and enum members do not, and failing the
+                 build over them would reward noise comments rather than useful ones. -->
+    <!-- CA1848 / CA1873: LoggerMessage source generators are reserved for genuine hot paths.
+                 Elsewhere the readability of a plain structured-logging call is worth the
+                 boxing of a value-type argument. The Graph transport's retry loop, which is
+                 the one hot path that matters, guards its log calls with IsEnabled. -->
     <!-- CA1031: a few top-level handlers must catch broadly to keep the UI alive;
                  each such site logs the exception and never swallows silently. -->
-    <NoWarn>$(NoWarn);CA1848;CA1031</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;CA1848;CA1873;CA1031</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">

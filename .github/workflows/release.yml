@@ -1,0 +1,161 @@
+name: Release
+
+# Triggered by a semantic version tag, for example v1.2.3.
+#
+# Artifacts produced here are NOT signed and NOT notarized. The release notes say so
+# explicitly. Do not describe them as signed.
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+', 'v[0-9]+.[0-9]+.[0-9]+-*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build, without the leading v'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  verify:
+    name: Verify before release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      # A release must never be cut from a tree that would fail the publication gate.
+      - name: Publication safety scan
+        run: ./scripts/scan-secrets.sh
+
+      - name: Build and test
+        run: |
+          dotnet build SharePointLinkManifestBuilder.slnx --configuration Release -warnaserror
+          dotnet test SharePointLinkManifestBuilder.slnx --configuration Release --no-build
+
+  package:
+    name: Package ${{ matrix.rid }}
+    needs: verify
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: win-x64,     os: windows-latest }
+          - { rid: win-arm64,   os: windows-latest }
+          - { rid: osx-x64,     os: macos-latest }
+          - { rid: osx-arm64,   os: macos-latest }
+          - { rid: linux-x64,   os: ubuntu-latest }
+          - { rid: linux-arm64, os: ubuntu-latest }
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Package
+        shell: bash
+        run: ./scripts/package.sh ${{ matrix.rid }}
+
+      - name: Upload package
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: package-${{ matrix.rid }}
+          path: artifacts/packages/
+          retention-days: 7
+          if-no-files-found: error
+
+  release:
+    name: Create release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Download all packages
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          path: artifacts/downloaded
+          merge-multiple: true
+
+      - name: Collect packages
+        run: |
+          mkdir -p artifacts/packages
+          find artifacts/downloaded -type f \( -name '*.zip' -o -name '*.tar.gz' \) \
+            -exec cp {} artifacts/packages/ \;
+          ls -la artifacts/packages
+
+      - name: Generate checksums
+        run: ./scripts/checksums.sh
+
+      - name: Generate dependency inventory
+        run: |
+          dotnet restore SharePointLinkManifestBuilder.slnx
+          ./scripts/sbom.sh
+          cp artifacts/sbom/dependencies.txt artifacts/packages/
+
+      - name: Compose release notes
+        run: |
+          {
+            echo "## SharePoint Link Manifest Builder ${GITHUB_REF_NAME}"
+            echo
+            echo "### Artifacts"
+            echo
+            echo "| Platform | File |"
+            echo "| --- | --- |"
+            for f in artifacts/packages/*.zip artifacts/packages/*.tar.gz; do
+              [ -e "$f" ] || continue
+              echo "| \`$(basename "$f" | sed -E 's/.*-(win|osx|linux)-/\1-/; s/\.(zip|tar\.gz)$//')\` | \`$(basename "$f")\` |"
+            done
+            echo
+            echo "### Verifying a download"
+            echo
+            echo '```bash'
+            echo "sha256sum -c SHA256SUMS.txt"
+            echo '```'
+            echo
+            echo "### Signing status"
+            echo
+            echo "**These artifacts are not code signed and not notarized.** Windows SmartScreen"
+            echo "and macOS Gatekeeper will warn about them. Signing requires credentials that are"
+            echo "not present in this repository; see \`docs/PACKAGING.md\`."
+            echo
+            echo "### Contents"
+            echo
+            echo "- \`SHA256SUMS.txt\` - checksums for every artifact"
+            echo "- \`dependencies.txt\` - dependency inventory and vulnerability report"
+            echo
+            echo "See \`CHANGELOG.md\` for what changed."
+          } > release-notes.md
+          cat release-notes.md
+
+      # gh is preinstalled on the runner and uses the workflow token, so no third-party
+      # release action is needed and there is one less pinned dependency to trust.
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "SharePoint Link Manifest Builder ${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md \
+            --verify-tag \
+            artifacts/packages/*

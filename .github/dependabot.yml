@@ -1,0 +1,34 @@
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+      include: scope
+    labels: [dependencies]
+    groups:
+      # Avalonia packages must move together; a mixed set fails at runtime rather than
+      # at build time, which is a nasty way to find out.
+      avalonia:
+        patterns: ["Avalonia*"]
+      microsoft-extensions:
+        patterns: ["Microsoft.Extensions.*"]
+      microsoft-identity:
+        patterns: ["Microsoft.Identity.*"]
+      testing:
+        patterns: ["xunit*", "Microsoft.NET.Test.Sdk", "NSubstitute", "coverlet.*"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels: [dependencies, github-actions]

@@ -1,0 +1,208 @@
+# Troubleshooting
+
+Every error the application shows carries a **correlation ID**. Include it when asking for help:
+it lets a maintainer, or Microsoft support, trace the exact request.
+
+---
+
+## Sign-in and consent
+
+### "An authorized Microsoft Entra administrator must approve the requested permissions"
+
+The permissions need administrator consent and you are not an administrator, or your tenant
+requires admin consent for all applications.
+
+**What to do.** On the Consent page or the Permissions page, use **Copy consent link** and send
+it to an authorized administrator. Save the configuration as pending approval, then use **Check
+again** once they confirm.
+
+### "You signed in to a different Microsoft 365 organization than this application is configured for"
+
+You are signed into more than one directory and picked the wrong one.
+
+**What to do.** Sign in again and select an account in the tenant shown in the wizard. This is a
+deliberate refusal: accepting a token from another tenant would be a cross-tenant data risk.
+
+### "The consent response could not be verified and was rejected"
+
+The `state` value returned by the browser did not match the one this application generated.
+Nothing was changed.
+
+**What to do.** Start the consent step again from the application. If it recurs, check whether
+something is intercepting or rewriting your browser redirects.
+
+### "Your organization requires an additional step, such as multi-factor authentication"
+
+Conditional Access needs interaction.
+
+**What to do.** Sign in again and complete the prompts. If it repeats immediately, the device may
+not satisfy a compliance requirement; your administrator can check the sign-in log.
+
+### Consent seemed to succeed, but verification says permissions are missing
+
+This is the application being honest. The redirect looked successful, but the token Microsoft
+Entra actually issued did not contain every required scope.
+
+**What to do.** Check the Permissions page for exactly which scopes are missing. Common causes: an
+administrator consented to a subset; a Conditional Access policy restricts the application; or
+consent was granted in a different tenant.
+
+### Automatic setup is greyed out
+
+Automatic setup needs a publisher-supplied bootstrap client ID, which this build does not
+include.
+
+**What to do.** Use **Use an existing app registration**. See
+[ENTRA-SETUP.md](ENTRA-SETUP.md) section 4 for creating one; it takes about two minutes.
+
+### "Your account is not permitted to create or change application registrations"
+
+Your tenant restricts app registration, which is a common and reasonable policy.
+
+**What to do.** Ask an administrator to create the registration, then use the
+existing-registration path.
+
+---
+
+## Browsing
+
+### A site does not appear in search
+
+`GET /sites?search=` returns what the search index exposes to your account. It is not a complete
+list of tenant sites, and the application does not claim otherwise.
+
+**What to do.** Paste the site URL into the *Open URL* box. That resolves the site directly
+rather than through the index.
+
+### "That user does not have a OneDrive yet"
+
+The user has never opened OneDrive, so it has not been provisioned.
+
+**What to do.** The user must open OneDrive once. This application deliberately does not
+provision a OneDrive on someone else's behalf.
+
+### "You do not have permission to read that user's OneDrive"
+
+Your own account cannot open it.
+
+**What to do.** Nothing in this application can change that. Delegated access is bounded by your
+own permissions, and administrator consent does not grant access to everyone's files. Ask the
+owner to share it with you, or use an account that already has access.
+
+### A folder shows an error with a Retry button
+
+That folder could not be listed, usually a permissions boundary inside an otherwise readable
+library.
+
+**What to do.** Retry in case it was transient. If it persists, you do not have access to that
+subtree. A job will record it as skipped and continue with everything else.
+
+### A pasted URL resolves to the wrong place
+
+Some SharePoint URLs carry the real folder in a query parameter rather than the path. The
+application handles the common `_layouts` forms, but the SharePoint UI produces several.
+
+**What to do.** Navigate into the folder in SharePoint and copy the address bar URL, or browse to
+it in the tree instead.
+
+---
+
+## Running a job
+
+### "Your organization's sharing policy does not allow this kind of link"
+
+Tenant policy refused the request. Most often *Anyone with the link* on a site where anonymous
+sharing is disabled.
+
+**What to do.** Choose *People in the organization*, or ask an administrator about the external
+sharing policy for that site. This application cannot override policy and will not pretend to.
+
+### Everything reports "Access denied"
+
+Either the required permission is missing, or your account cannot share those items.
+
+**What to do.** Check the Permissions page first. If `Files.ReadWrite.All` is granted, the issue
+is item-level: you may be able to read a library without being allowed to share from it.
+
+### The job is very slow, and progress mentions throttling
+
+Microsoft 365 is asking the application to slow down. It honours the requested wait and resumes
+automatically.
+
+**What to do.** Nothing is wrong. To reduce it: lower **Maximum concurrency**, add a **delay
+between requests**, or run against fewer targets at once. Throttling is tenant-wide, so other
+activity in your organization affects it too.
+
+### Results say "Reused" but I expected "Created"
+
+An equivalent link already existed and Microsoft Graph returned it rather than creating a
+duplicate. The link works; it simply is not new.
+
+The distinction is deliberate: reporting a reused link as created would misrepresent what the
+job did.
+
+### The job was cancelled but manifests were still written
+
+Intentional. Links created before cancellation are real, so the successes are recorded rather
+than discarded.
+
+### "The manifest changed in SharePoint after this application read it"
+
+Someone or something modified the manifest between the read and the write, so the write was
+refused rather than overwriting their change.
+
+**What to do.** Run the job again; it will read the current version first.
+
+### A timestamped manifest appeared instead of the expected name
+
+There was already a file at that path that this application did not write, so it was left
+untouched and a timestamped copy was written alongside.
+
+**What to do.** Check the existing file. If it is safe to replace, set the conflict policy to
+*Replace*.
+
+---
+
+## Local environment
+
+### "Secure storage could not be initialised"
+
+Usually Linux without a running keyring.
+
+**What to do.** Install and start a Secret Service provider (`gnome-keyring`, `kwallet`, or
+similar) plus `libsecret`. Until then the application works, but you will sign in again each
+launch. It will never write tokens to disk unprotected.
+
+### The application will not start
+
+Check for a `startup-crash-*.log` file next to the executable.
+
+**What to do.** Confirm the .NET runtime requirement is met (self-contained builds include it).
+On macOS, an unsigned application may be blocked by Gatekeeper: see
+[PACKAGING.md](PACKAGING.md).
+
+### macOS says the application is damaged or from an unidentified developer
+
+Release artifacts are unsigned and un-notarized, and Gatekeeper blocks them by default.
+
+**What to do.** Right-click the application and choose *Open*, then confirm. Only do this if you
+trust the source and have verified the SHA-256 checksum.
+
+### Windows SmartScreen warns about the download
+
+Same cause: the artifact is unsigned.
+
+**What to do.** Verify the checksum against `SHA256SUMS.txt`, then choose *More info* and *Run
+anyway* if you trust the source.
+
+---
+
+## Getting more information
+
+1. **Diagnostics page** — run the connectivity test, review sanitized recent errors.
+2. **Open log folder** — logs are redacted, so no token appears in them.
+3. **Export a diagnostic bundle** — the page lists exactly what it will include before writing.
+
+When reporting a problem, include the application version, platform, the error message, and the
+correlation ID. Do **not** include tokens, sharing links, real URLs, tenant identifiers or
+personal data. See [SUPPORT.md](SUPPORT.md).

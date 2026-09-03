@@ -1,0 +1,29 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+             xmlns:views="using:SharePointLinkManifestBuilder.App.Views"
+             x:Class="SharePointLinkManifestBuilder.App.App"
+             RequestedThemeVariant="Default">
+
+  <Application.DataTemplates>
+    <!-- Maps each page view model to its view, so the shell can host any page by binding. -->
+    <DataTemplate DataType="vm:HomeViewModel"><views:HomeView /></DataTemplate>
+    <DataTemplate DataType="vm:NewLinkJobViewModel"><views:NewLinkJobView /></DataTemplate>
+    <DataTemplate DataType="vm:SharePointBrowserViewModel"><views:SharePointBrowserView /></DataTemplate>
+    <DataTemplate DataType="vm:OneDriveBrowserViewModel"><views:OneDriveBrowserView /></DataTemplate>
+    <DataTemplate DataType="vm:SavedProfilesViewModel"><views:SavedProfilesView /></DataTemplate>
+    <DataTemplate DataType="vm:JobHistoryViewModel"><views:JobHistoryView /></DataTemplate>
+    <DataTemplate DataType="vm:TenantSetupViewModel"><views:TenantSetupView /></DataTemplate>
+    <DataTemplate DataType="vm:PermissionsViewModel"><views:PermissionsView /></DataTemplate>
+    <DataTemplate DataType="vm:SettingsViewModel"><views:SettingsView /></DataTemplate>
+    <DataTemplate DataType="vm:DiagnosticsViewModel"><views:DiagnosticsView /></DataTemplate>
+    <DataTemplate DataType="vm:HelpViewModel"><views:HelpView /></DataTemplate>
+    <DataTemplate DataType="vm:AboutViewModel"><views:AboutView /></DataTemplate>
+  </Application.DataTemplates>
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
+    <StyleInclude Source="avares://SharePointLinkManifestBuilder/Styles/AppStyles.axaml" />
+  </Application.Styles>
+</Application>

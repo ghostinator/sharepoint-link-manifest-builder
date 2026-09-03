@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+             x:Class="SharePointLinkManifestBuilder.App.Views.HelpView"
+             x:DataType="vm:HelpViewModel">
+
+  <ScrollViewer>
+    <StackPanel Margin="24" Spacing="8" MaxWidth="880" HorizontalAlignment="Left">
+
+      <TextBlock Text="Help" Classes="PageTitle" />
+      <TextBlock Classes="Subtle"
+                 Text="What each option means, and what Microsoft 365 decides rather than this application." />
+
+      <TextBlock Text="Link permissions and audiences" Classes="SectionTitle" />
+      <ItemsControl ItemsSource="{Binding LinkTypes}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Classes="Card" Padding="12" Margin="0,0,0,8">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{Binding Topic}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Explanation}" Classes="Body" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <TextBlock Text="Concepts" Classes="SectionTitle" />
+      <ItemsControl ItemsSource="{Binding Concepts}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Classes="Card" Padding="12" Margin="0,0,0,8">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{Binding Topic}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Explanation}" Classes="Body" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <TextBlock Text="Tenant policy limits what this application can do" Classes="SectionTitle" />
+      <Border Classes="Notice">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="Body"
+                     Text="This application requests links; Microsoft 365 decides whether to grant them. Your organization's external sharing policy, item-level permissions, sensitivity labels and Conditional Access all still apply, and nothing here can override any of them." />
+          <TextBlock Classes="Body"
+                     Text="Delegated access means the application acts as you. It can never reach content your own account cannot already open, even after an administrator grants consent." />
+          <TextBlock Classes="Body"
+                     Text="When a request is refused by policy, the result is recorded as blocked rather than being silently downgraded to something weaker." />
+        </StackPanel>
+      </Border>
+
+      <TextBlock Text="Documentation" Classes="SectionTitle" />
+      <TextBlock Classes="Body"
+                 Text="The repository contains a full user guide, administrator guide, Entra setup guide, Graph operations reference, threat model and troubleshooting guide in the docs folder." />
+      <TextBlock Text="{Binding Product.SupportUrl, StringFormat='Support: {0}'}" Classes="Mono" />
+      <TextBlock Text="{Binding Product.IssueTrackerUrl, StringFormat='Issues: {0}'}" Classes="Mono" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -1,0 +1,501 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+             xmlns:models="using:SharePointLinkManifestBuilder.Core.Models"
+             xmlns:conv="using:SharePointLinkManifestBuilder.App.Converters"
+             x:Class="SharePointLinkManifestBuilder.App.Views.NewLinkJobView"
+             x:DataType="vm:NewLinkJobViewModel">
+
+  <Grid RowDefinitions="Auto,*" Margin="24">
+
+    <StackPanel Grid.Row="0" Spacing="4">
+      <TextBlock Text="New Link Job" Classes="PageTitle" />
+      <TextBlock Classes="Subtle"
+                 Text="Choose what to process, what to request, and where manifests go. Preview first; the job only runs when you press Start." />
+
+      <Border Classes="Danger" IsVisible="{Binding HasError}" Margin="0,8,0,0">
+        <TextBlock Text="{Binding ErrorMessage}" Classes="Body"
+                   AutomationProperties.LiveSetting="Assertive" />
+      </Border>
+
+      <TextBlock Text="{Binding StatusMessage}" Classes="Subtle" Margin="0,4,0,0"
+                 IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 AutomationProperties.LiveSetting="Polite" />
+    </StackPanel>
+
+    <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" Margin="0,12,0,0">
+
+      <!-- ============================ TARGETS ============================ -->
+      <TabItem Header="1. Targets">
+        <DockPanel Margin="0,12">
+          <StackPanel DockPanel.Dock="Top" Spacing="8">
+            <TextBlock Classes="Body"
+                       Text="Add locations from the SharePoint Sites or OneDrive pages. Each target can include subfolders or not, independently." />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="Browse SharePoint"
+                      Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                      CommandParameter="sharepoint" />
+              <Button Content="Browse OneDrive"
+                      Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                      CommandParameter="onedrive" />
+              <Button Content="Remove all targets" Command="{Binding ClearTargetsCommand}" />
+            </StackPanel>
+            <TextBlock Classes="Subtle" Text="No targets yet. Use the browse buttons above."
+                       IsVisible="{Binding !Targets.Count}" />
+          </StackPanel>
+
+          <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Targets}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="models:ProcessingTarget">
+                  <Border Classes="Card" Padding="12" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Grid.Column="0" Spacing="2">
+                        <TextBlock Text="{Binding DisplayPath}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Classes="Subtle" FontSize="11">
+                          <TextBlock.Text>
+                            <MultiBinding StringFormat="{}{0} - subfolders: {1} - enabled: {2}">
+                              <Binding Path="SourceTypeLabel" />
+                              <Binding Path="Recursive" />
+                              <Binding Path="IsEnabled" />
+                            </MultiBinding>
+                          </TextBlock.Text>
+                        </TextBlock>
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <Button Content="Toggle subfolders"
+                                Command="{Binding $parent[ItemsControl].((vm:NewLinkJobViewModel)DataContext).ToggleTargetRecursiveCommand}"
+                                CommandParameter="{Binding}" />
+                        <Button Content="Enable / disable"
+                                Command="{Binding $parent[ItemsControl].((vm:NewLinkJobViewModel)DataContext).ToggleTargetEnabledCommand}"
+                                CommandParameter="{Binding}" />
+                        <Button Content="Remove"
+                                Command="{Binding $parent[ItemsControl].((vm:NewLinkJobViewModel)DataContext).RemoveTargetCommand}"
+                                CommandParameter="{Binding}" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ============================ LINK ============================ -->
+      <TabItem Header="2. Link">
+        <ScrollViewer>
+          <StackPanel Margin="0,12" Spacing="8" MaxWidth="760" HorizontalAlignment="Left">
+
+            <TextBlock Text="Permission" Classes="SectionTitle" />
+            <StackPanel Orientation="Horizontal" Spacing="16">
+              <RadioButton GroupName="perm" Content="View (read only)"
+                           IsChecked="{Binding LinkPermission, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=View}" />
+              <RadioButton GroupName="perm" Content="Edit (read and write)"
+                           IsChecked="{Binding LinkPermission, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Edit}" />
+            </StackPanel>
+
+            <TextBlock Text="Audience" Classes="SectionTitle" />
+            <StackPanel Spacing="6">
+              <RadioButton GroupName="aud" Content="People in the organization"
+                           IsChecked="{Binding LinkAudience, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Organization}" />
+              <RadioButton GroupName="aud" Content="Specific people"
+                           IsChecked="{Binding LinkAudience, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=SpecificPeople}" />
+              <RadioButton GroupName="aud" Content="Anyone with the link"
+                           IsChecked="{Binding LinkAudience, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Anyone}" />
+            </StackPanel>
+
+            <Border Classes="Warning" IsVisible="{Binding ShowAnyoneWarning}">
+              <StackPanel Spacing="4">
+                <TextBlock Text="Warning: highest-risk audience" FontWeight="SemiBold" />
+                <TextBlock Classes="Body"
+                           Text="'Anyone with the link' produces links that work without signing in, including outside your organization. Many organizations disable this. If yours does, requests are reported as blocked by policy; this application cannot override that." />
+              </StackPanel>
+            </Border>
+
+            <StackPanel Spacing="6" IsVisible="{Binding ShowRecipients}">
+              <TextBlock Text="Recipients" Classes="SectionTitle" />
+              <TextBlock Classes="Subtle"
+                         Text="One address per line, or separated by commas. Microsoft Graph grants these people access through a separate invite operation; the v1.0 createLink action does not take recipients." />
+              <TextBox Text="{Binding RecipientsText}" AcceptsReturn="True" Height="90"
+                       PlaceholderText="person@example.com"
+                       AutomationProperties.Name="Recipients, one per line" />
+              <CheckBox Content="Send Microsoft's invitation email to these recipients"
+                        IsChecked="{Binding SendInvitationEmail}" />
+              <TextBlock Classes="Subtle" FontSize="11"
+                         Text="Off by default. No message is sent unless you tick this." />
+              <TextBox Text="{Binding InvitationMessage}" PlaceholderText="Optional message"
+                       IsEnabled="{Binding SendInvitationEmail}"
+                       AutomationProperties.Name="Invitation message" />
+            </StackPanel>
+
+            <TextBlock Text="Expiry and behaviour" Classes="SectionTitle" />
+            <CheckBox Content="Request an expiry date" IsChecked="{Binding UseExpiration}" />
+            <CalendarDatePicker SelectedDate="{Binding ExpirationDate}"
+                                IsEnabled="{Binding UseExpiration}"
+                                AutomationProperties.Name="Link expiry date" />
+            <TextBlock Classes="Subtle" FontSize="11"
+                       Text="Expiry support depends on your organization's policy and licensing. The actual expiry Microsoft applies is recorded in the results." />
+
+            <CheckBox Content="Reuse an equivalent existing link instead of creating a new one"
+                      IsChecked="{Binding ReuseExistingLinks}" />
+            <CheckBox Content="Skip a file entirely when an equivalent link already exists"
+                      IsChecked="{Binding SkipWhenEquivalentLinkExists}" />
+            <TextBlock Classes="Subtle" FontSize="11"
+                       Text="Skipping costs one extra read per file but avoids a write. Useful on repeat runs over large libraries." />
+            <CheckBox Content="Retain inherited permissions when sharing an item for the first time"
+                      IsChecked="{Binding RetainInheritedPermissions}" />
+
+            <Border Classes="Notice">
+              <TextBlock Text="{Binding LinkSummary}" Classes="Body" FontWeight="SemiBold" />
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ============================ MANIFESTS ============================ -->
+      <TabItem Header="3. Manifests">
+        <ScrollViewer>
+          <StackPanel Margin="0,12" Spacing="8" MaxWidth="760" HorizontalAlignment="Left">
+
+            <TextBlock Text="What to write" Classes="SectionTitle" />
+            <CheckBox Content="Per-folder manifest, in each folder containing processed files"
+                      IsChecked="{Binding WritePerFolderManifest}" />
+            <CheckBox Content="Master manifest, covering everything beneath each target"
+                      IsChecked="{Binding WriteMasterManifest}" />
+            <CheckBox Content="Also list descendant files inside each per-folder manifest"
+                      IsChecked="{Binding AggregateDescendants}" />
+            <TextBlock Classes="Subtle" FontSize="11"
+                       Text="Aggregating duplicates entries across nested manifests, which is why it is off by default." />
+
+            <TextBlock Text="Formats" Classes="SectionTitle" />
+            <StackPanel Orientation="Horizontal" Spacing="16">
+              <CheckBox Content="Plain text (.txt)" IsChecked="{Binding FormatPlainText}" />
+              <CheckBox Content="Markdown (.md)" IsChecked="{Binding FormatMarkdown}" />
+              <CheckBox Content="CSV (.csv)" IsChecked="{Binding FormatCsv}" />
+              <CheckBox Content="JSON (.json)" IsChecked="{Binding FormatJson}" />
+            </StackPanel>
+            <TextBlock Classes="Subtle" FontSize="11"
+                       Text="Plain text is the default and the only format this application can read back to update in place." />
+
+            <TextBlock Text="If a manifest already exists" Classes="SectionTitle" />
+            <ComboBox ItemsSource="{Binding ConflictPolicies}" SelectedItem="{Binding ConflictPolicy}"
+                      AutomationProperties.Name="Manifest conflict policy" MinWidth="280" />
+            <TextBlock Classes="Subtle" FontSize="11" TextWrapping="Wrap"
+                       Text="Update safely merges into a manifest this application wrote. A file it does not recognise is never overwritten: a timestamped copy is written alongside instead." />
+
+            <TextBlock Text="Files that were not seen on this run" Classes="SectionTitle" />
+            <ComboBox ItemsSource="{Binding MissingEntryPolicies}" SelectedItem="{Binding MissingEntryPolicy}"
+                      AutomationProperties.Name="Missing entry policy" MinWidth="280" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ============================ FILTERS ============================ -->
+      <TabItem Header="4. Filters">
+        <ScrollViewer>
+          <StackPanel Margin="0,12" Spacing="8" MaxWidth="760" HorizontalAlignment="Left">
+
+            <TextBlock Classes="Body"
+                       Text="All filters are optional. Temporary files, generated manifests, hidden and system items, packages and shortcuts are excluded by default." />
+
+            <TextBlock Text="Extensions" Classes="SectionTitle" />
+            <TextBox Text="{Binding IncludeExtensions}" PlaceholderText="Include, e.g. docx, pdf, xlsx"
+                     AutomationProperties.Name="Include extensions" />
+            <TextBox Text="{Binding ExcludeExtensions}" PlaceholderText="Exclude, e.g. exe, zip"
+                     AutomationProperties.Name="Exclude extensions" />
+
+            <TextBlock Text="Name patterns" Classes="SectionTitle" />
+            <TextBox Text="{Binding IncludePatterns}" PlaceholderText="Include, e.g. report*, *-final.*"
+                     AutomationProperties.Name="Include name patterns" />
+            <TextBox Text="{Binding ExcludePatterns}" PlaceholderText="Exclude, e.g. *draft*"
+                     AutomationProperties.Name="Exclude name patterns" />
+            <TextBlock Classes="Subtle" FontSize="11" Text="* matches any run of characters, ? matches exactly one." />
+
+            <TextBlock Text="Modified date" Classes="SectionTitle" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <CalendarDatePicker SelectedDate="{Binding ModifiedAfter}"
+                                  AutomationProperties.Name="Modified on or after" />
+              <CalendarDatePicker SelectedDate="{Binding ModifiedBefore}"
+                                  AutomationProperties.Name="Modified on or before" />
+            </StackPanel>
+
+            <TextBlock Text="Size" Classes="SectionTitle" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <NumericUpDown Value="{Binding MinimumSizeKilobytes}" Minimum="0" Width="160"
+                             AutomationProperties.Name="Minimum size in kilobytes" />
+              <NumericUpDown Value="{Binding MaximumSizeKilobytes}" Minimum="0" Width="160"
+                             AutomationProperties.Name="Maximum size in kilobytes" />
+              <TextBlock Text="kilobytes" VerticalAlignment="Center" Classes="Subtle" />
+            </StackPanel>
+
+            <TextBlock Text="Default exclusions" Classes="SectionTitle" />
+            <CheckBox Content="Include hidden and system items" IsChecked="{Binding IncludeHiddenItems}" />
+            <CheckBox Content="Include temporary and lock files" IsChecked="{Binding IncludeTemporaryFiles}" />
+
+            <TextBlock Text="Execution" Classes="SectionTitle" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <NumericUpDown Value="{Binding MaxConcurrency}" Minimum="1" Maximum="32" Width="140"
+                             AutomationProperties.Name="Maximum concurrency" />
+              <TextBlock Text="concurrent requests" VerticalAlignment="Center" Classes="Subtle" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <NumericUpDown Value="{Binding RequestDelayMilliseconds}" Minimum="0" Maximum="60000" Width="140"
+                             AutomationProperties.Name="Delay between requests in milliseconds" />
+              <TextBlock Text="ms delay between requests" VerticalAlignment="Center" Classes="Subtle" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <NumericUpDown Value="{Binding MaxRetryAttempts}" Minimum="0" Maximum="10" Width="140"
+                             AutomationProperties.Name="Maximum retry attempts" />
+              <TextBlock Text="retry attempts" VerticalAlignment="Center" Classes="Subtle" />
+            </StackPanel>
+            <CheckBox Content="Stop at the first failure" IsChecked="{Binding StopOnFirstError}" />
+
+            <TextBlock Text="Overlapping targets" Classes="SectionTitle" />
+            <ComboBox ItemsSource="{Binding OverlapResolutions}" SelectedItem="{Binding OverlapResolution}"
+                      AutomationProperties.Name="Overlap resolution" MinWidth="280" />
+
+            <Border Classes="Notice">
+              <TextBlock Text="{Binding FilterSummary}" Classes="Body" />
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ============================ PREVIEW ============================ -->
+      <TabItem Header="5. Preview">
+        <DockPanel Margin="0,12">
+          <StackPanel DockPanel.Dock="Top" Spacing="8">
+
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <CheckBox Content="Dry run: change nothing at all" IsChecked="{Binding DryRun}"
+                        ToolTip.Tip="Enumerates, filters and validates without creating a link or writing a manifest." />
+              <Button Content="Build preview" Classes="Primary" Command="{Binding BuildPreviewCommand}" />
+              <ProgressBar IsIndeterminate="True" Width="120" IsVisible="{Binding IsBusy}"
+                           AutomationProperties.Name="Building preview" />
+            </StackPanel>
+
+            <ItemsControl ItemsSource="{Binding ValidationProblems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Text="{Binding}" Foreground="IndianRed" Classes="Body" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <ScrollViewer>
+            <StackPanel Spacing="8" Margin="0,12,0,0">
+
+              <Border Classes="Danger" IsVisible="{Binding PreflightBlockers.Count}">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Blocked: the job cannot run yet" FontWeight="SemiBold" />
+                  <ItemsControl ItemsSource="{Binding PreflightBlockers}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding}" Classes="Body" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+
+              <Border Classes="Warning" IsVisible="{Binding PreflightWarnings.Count}">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Warnings" FontWeight="SemiBold" />
+                  <ItemsControl ItemsSource="{Binding PreflightWarnings}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding}" Classes="Body" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+
+              <!-- Three separate lists, deliberately. Presenting an unknown as a checked box
+                   would be a false assurance about tenant policy. -->
+              <Border Classes="Card">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Checked and confirmed" Classes="SectionTitle" Margin="0" />
+                  <ItemsControl ItemsSource="{Binding PreflightValidated}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding}" Classes="Body" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <TextBlock Text="Expected" Classes="SectionTitle" />
+                  <ItemsControl ItemsSource="{Binding PreflightExpected}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding}" Classes="Body" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <TextBlock Text="Cannot be known until the job runs" Classes="SectionTitle" />
+                  <ItemsControl ItemsSource="{Binding PreflightUnknown}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding}" Classes="Body" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+
+              <Border Classes="Card">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="Manifest destinations" Classes="SectionTitle" Margin="0" />
+                  <ItemsControl ItemsSource="{Binding ManifestDestinations}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding}" Classes="Mono" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+
+              <TextBlock Classes="SectionTitle"
+                         Text="{Binding PreviewCandidates.Count, StringFormat='Files that would be processed ({0} shown)'}" />
+              <DataGrid ItemsSource="{Binding PreviewCandidates}" Height="240"
+                        IsReadOnly="True" GridLinesVisibility="Horizontal"
+                        AutomationProperties.Name="Candidate files">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="240" />
+                  <DataGridTextColumn Header="Relative path" Binding="{Binding RelativePath}" Width="*" />
+                  <DataGridTextColumn Header="Size"
+                                      Binding="{Binding Size, Converter={x:Static conv:ByteSizeConverter.Instance}}"
+                                      Width="100" />
+                  <DataGridTextColumn Header="Modified" Binding="{Binding LastModifiedUtc}" Width="180" />
+                </DataGrid.Columns>
+              </DataGrid>
+
+              <TextBlock Classes="SectionTitle"
+                         Text="{Binding PreviewSkipped.Count, StringFormat='Items that would be skipped ({0} shown)'}" />
+              <DataGrid ItemsSource="{Binding PreviewSkipped}" Height="180"
+                        IsReadOnly="True" GridLinesVisibility="Horizontal"
+                        AutomationProperties.Name="Skipped items">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="240" />
+                  <DataGridTextColumn Header="Reason" Binding="{Binding SkipExplanation}" Width="*" />
+                </DataGrid.Columns>
+              </DataGrid>
+
+              <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,8,0,0">
+                <Button Content="Start job" Classes="Primary"
+                        Command="{Binding StartCommand}" IsEnabled="{Binding CanStart}" />
+                <TextBlock VerticalAlignment="Center" Classes="Subtle"
+                           Text="Build a preview before the job can be started." />
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ============================ RUN AND RESULTS ============================ -->
+      <TabItem Header="6. Run and results">
+        <DockPanel Margin="0,12">
+          <StackPanel DockPanel.Dock="Top" Spacing="8">
+
+            <Border Classes="Card">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding Progress.AccessibleStatus}" FontWeight="SemiBold"
+                           AutomationProperties.LiveSetting="Polite"
+                           AutomationProperties.Name="Job progress" />
+
+                <ProgressBar Value="{Binding Progress.ProcessedCount}"
+                             Maximum="{Binding Progress.TotalCount}"
+                             Height="8" IsIndeterminate="{Binding IsBusy}" />
+
+                <Grid ColumnDefinitions="*,*,*,*,*">
+                  <TextBlock Grid.Column="0" Text="{Binding Progress.CreatedCount, StringFormat='Created: {0}'}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Progress.ReusedCount, StringFormat='Reused: {0}'}" />
+                  <TextBlock Grid.Column="2" Text="{Binding Progress.SkippedCount, StringFormat='Skipped: {0}'}" />
+                  <TextBlock Grid.Column="3" Text="{Binding Progress.FailedCount, StringFormat='Failed: {0}'}" />
+                  <TextBlock Grid.Column="4" Text="{Binding Progress.RetryCount, StringFormat='Retries: {0}'}" />
+                </Grid>
+
+                <TextBlock Classes="Subtle" FontSize="11"
+                           Text="{Binding Progress.CurrentRelativePath, StringFormat='Current: {0}'}"
+                           IsVisible="{Binding Progress.CurrentRelativePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                <Border Classes="Warning" IsVisible="{Binding Progress.IsThrottled}">
+                  <TextBlock Classes="Body"
+                             Text="Microsoft 365 asked this application to slow down. It is waiting and will resume automatically." />
+                </Border>
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="Pause" Command="{Binding PauseCommand}"
+                          IsEnabled="{Binding IsRunning}" />
+                  <Button Content="Resume" Command="{Binding ResumeCommand}"
+                          IsEnabled="{Binding IsPaused}" />
+                  <Button Content="Cancel" Command="{Binding CancelCommand}"
+                          IsEnabled="{Binding IsRunning}" />
+                  <Button Content="Retry failures" Command="{Binding RetryFailuresCommand}"
+                          IsEnabled="{Binding HasRetryableFailures}" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+
+            <Border Classes="Card" IsVisible="{Binding ManifestResults.Count}">
+              <StackPanel Spacing="6">
+                <TextBlock Text="Manifests written" Classes="SectionTitle" Margin="0" />
+                <ItemsControl ItemsSource="{Binding ManifestResults}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="models:ManifestWriteResult">
+                      <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                        <StackPanel Grid.Column="0">
+                          <TextBlock Text="{Binding DisplayPath}" />
+                          <TextBlock Classes="Subtle" FontSize="11">
+                            <TextBlock.Text>
+                              <MultiBinding StringFormat="{}{0} - {1} entries - {2}">
+                                <Binding Path="Format" />
+                                <Binding Path="EntryCount" />
+                                <Binding Path="ConflictOutcome" />
+                              </MultiBinding>
+                            </TextBlock.Text>
+                          </TextBlock>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Open"
+                                Command="{Binding $parent[ItemsControl].((vm:NewLinkJobViewModel)DataContext).OpenManifestCommand}"
+                                CommandParameter="{Binding}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Content="Copy manifest locations" Command="{Binding CopyManifestLocationsCommand}"
+                        HorizontalAlignment="Left" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+
+          <DataGrid ItemsSource="{Binding Results}" IsReadOnly="True"
+                    GridLinesVisibility="Horizontal" Margin="0,12,0,0"
+                    AutomationProperties.Name="Per-file results">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="File" Binding="{Binding File.Name}" Width="220" />
+              <DataGridTemplateColumn Header="Status" Width="120">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate DataType="models:LinkResult">
+                    <!-- Status is text first; the colour bar beside it is only reinforcement. -->
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                      <Border Width="4" Height="16" CornerRadius="2"
+                              Background="{Binding Status, Converter={x:Static conv:LinkStatusBrushConverter.Instance}}" />
+                      <TextBlock Text="{Binding Status}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="Sharing link" Binding="{Binding SharingUrl}" Width="*" />
+              <DataGridTextColumn Header="Detail" Binding="{Binding Error.Message}" Width="280" />
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+    </TabControl>
+  </Grid>
+</UserControl>

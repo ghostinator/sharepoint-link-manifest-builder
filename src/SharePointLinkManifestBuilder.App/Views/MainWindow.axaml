@@ -1,0 +1,75 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+        x:Class="SharePointLinkManifestBuilder.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding WindowTitle}"
+        Width="1280" Height="840"
+        MinWidth="900" MinHeight="600"
+        WindowStartupLocation="CenterScreen">
+
+  <DockPanel>
+
+    <!-- Header: product name and the current connection, always visible. -->
+    <Border DockPanel.Dock="Top"
+            Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="16,10">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Grid.Column="0" Spacing="2">
+          <TextBlock Text="{Binding WindowTitle}" FontWeight="SemiBold" FontSize="14" />
+          <TextBlock Text="Build explicit manifests of SharePoint and OneDrive file links"
+                     Classes="Subtle" FontSize="12" />
+        </StackPanel>
+
+        <Border Grid.Column="1"
+                Padding="10,6" CornerRadius="6"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                ToolTip.Tip="{Binding ConnectionBadge}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Microsoft 365:" Classes="Subtle" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding ConnectionBadge}"
+                       VerticalAlignment="Center"
+                       MaxWidth="380" TextTrimming="CharacterEllipsis"
+                       AutomationProperties.Name="Microsoft 365 connection status" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+    <!-- Left navigation. A ListBox gives keyboard navigation and screen-reader semantics free. -->
+    <Border DockPanel.Dock="Left" Width="230"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            BorderThickness="0,0,1,0">
+      <ListBox ItemsSource="{Binding Pages}"
+               SelectedItem="{Binding CurrentPage}"
+               AutomationProperties.Name="Main navigation"
+               Padding="6">
+        <ListBox.ItemTemplate>
+          <DataTemplate DataType="vm:PageViewModelBase">
+            <TextBlock Text="{Binding Title}" Padding="6,8" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+
+    <Grid RowDefinitions="Auto,*">
+
+      <!-- First-run prompt. Text carries the meaning; the border colour only reinforces it. -->
+      <Border Grid.Row="0" Classes="Warning" Margin="16,16,16,0"
+              IsVisible="{Binding ShowSetupPrompt}">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock Text="{Binding SetupPrompt}" Classes="Body" VerticalAlignment="Center" />
+          <Button Content="Open Tenant Setup"
+                  Command="{Binding NavigateToCommand}"
+                  CommandParameter="setup" />
+        </StackPanel>
+      </Border>
+
+      <ContentControl Grid.Row="1" Content="{Binding CurrentPage}" />
+    </Grid>
+  </DockPanel>
+</Window>

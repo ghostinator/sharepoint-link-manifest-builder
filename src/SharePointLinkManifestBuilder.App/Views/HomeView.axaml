@@ -1,0 +1,137 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+             xmlns:models="using:SharePointLinkManifestBuilder.Core.Models"
+             x:Class="SharePointLinkManifestBuilder.App.Views.HomeView"
+             x:DataType="vm:HomeViewModel">
+
+  <ScrollViewer>
+    <StackPanel Margin="24" Spacing="4" MaxWidth="1000" HorizontalAlignment="Left">
+
+      <TextBlock Text="Home" Classes="PageTitle" />
+      <TextBlock Classes="Subtle"
+                 Text="Create explicit manifests of SharePoint and OneDrive file links for Microsoft Copilot or another authorized AI system." />
+
+      <!-- Connection status. The heading text states the state; colour is not the only cue. -->
+      <Border Classes="Card" Margin="0,16,0,12">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Microsoft 365 connection" Classes="SectionTitle" Margin="0" />
+          <TextBlock Text="{Binding ConnectionSummary}" Classes="Body"
+                     AutomationProperties.LiveSetting="Polite" />
+
+          <Grid ColumnDefinitions="200,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Tenant" Classes="Subtle" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding TenantDisplay}" />
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Account" Classes="Subtle" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AccountDisplay}" />
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Registration" Classes="Subtle" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding RegistrationDisplay}" />
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="Consent" Classes="Subtle" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ConsentDisplay}" />
+          </Grid>
+
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+            <Button Content="Sign in" Classes="Primary"
+                    Command="{Binding SignInCommand}"
+                    IsVisible="{Binding !IsConnected}" />
+            <Button Content="Configure Tenant"
+                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                    CommandParameter="setup" />
+            <Button Content="Permissions"
+                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                    CommandParameter="permissions" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="Warning" IsVisible="{Binding HasMissingScopes}">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Warning: permissions are missing" FontWeight="SemiBold" />
+          <ItemsControl ItemsSource="{Binding MissingScopes}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding}" Classes="Mono" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="Body"
+                     Text="Some operations will fail until these are granted. Open Permissions to request consent." />
+        </StackPanel>
+      </Border>
+
+      <Border Classes="Warning" IsVisible="{Binding HasSecureStorageWarning}">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Warning: secure storage is unavailable" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding SecureStorageWarning}" Classes="Body" />
+        </StackPanel>
+      </Border>
+
+      <TextBlock Text="Get started" Classes="SectionTitle" />
+      <WrapPanel Orientation="Horizontal">
+        <Button Content="Create New Link Job" Classes="Primary" Margin="0,0,8,8"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                CommandParameter="job" />
+        <Button Content="Browse SharePoint" Margin="0,0,8,8"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                CommandParameter="sharepoint" />
+        <Button Content="Browse OneDrive" Margin="0,0,8,8"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                CommandParameter="onedrive" />
+        <Button Content="Job History" Margin="0,0,8,8"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                CommandParameter="history" />
+        <Button Content="Check for Updates" Margin="0,0,8,8"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                CommandParameter="about" />
+      </WrapPanel>
+
+      <TextBlock Text="Recent jobs" Classes="SectionTitle" />
+      <TextBlock Classes="Subtle" Text="No jobs have been run yet."
+                 IsVisible="{Binding !RecentJobs.Count}" />
+      <ItemsControl ItemsSource="{Binding RecentJobs}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="models:JobHistoryEntry">
+            <Border Classes="Card" Padding="12" Margin="0,0,0,8">
+              <StackPanel Spacing="2">
+                <TextBlock FontWeight="SemiBold">
+                  <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0} - {1}">
+                      <Binding Path="StartedUtc" />
+                      <Binding Path="FinalPhase" />
+                    </MultiBinding>
+                  </TextBlock.Text>
+                </TextBlock>
+                <TextBlock Classes="Subtle">
+                  <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0} created, {1} reused, {2} skipped, {3} failed">
+                      <Binding Path="CreatedCount" />
+                      <Binding Path="ReusedCount" />
+                      <Binding Path="SkippedCount" />
+                      <Binding Path="FailedCount" />
+                    </MultiBinding>
+                  </TextBlock.Text>
+                </TextBlock>
+                <TextBlock Classes="Subtle" Text="Dry run" IsVisible="{Binding WasDryRun}" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <TextBlock Text="Recent locations" Classes="SectionTitle" />
+      <TextBlock Classes="Subtle" Text="No locations have been used yet."
+                 IsVisible="{Binding !RecentLocations.Count}" />
+      <ItemsControl ItemsSource="{Binding RecentLocations}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="models:RecentLocation">
+            <TextBlock Text="{Binding DisplayName}" Margin="0,2" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

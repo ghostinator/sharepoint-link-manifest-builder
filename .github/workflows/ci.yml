@@ -1,0 +1,72 @@
+name: CI
+
+# No Microsoft 365 credential, tenant identifier or secret is used anywhere in this workflow.
+# Every test runs against a mocked Microsoft Graph.
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  CI: true
+
+jobs:
+  build-and-test:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # All three desktop platforms: this application ships on all of them, and a
+        # platform-specific defect that only CI on one OS would miss is exactly the kind of
+        # bug that reaches users.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore SharePointLinkManifestBuilder.slnx
+
+      - name: Verify formatting
+        run: dotnet format SharePointLinkManifestBuilder.slnx --verify-no-changes --severity warn
+
+      - name: Build
+        run: dotnet build SharePointLinkManifestBuilder.slnx --configuration Release --no-restore -warnaserror
+
+      - name: Test
+        run: >
+          dotnet test SharePointLinkManifestBuilder.slnx
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=results-${{ matrix.os }}.trx"
+          --results-directory artifacts/test-results
+          --collect:"XPlat Code Coverage"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: test-results-${{ matrix.os }}
+          path: artifacts/test-results/
+          retention-days: 14
+          if-no-files-found: warn

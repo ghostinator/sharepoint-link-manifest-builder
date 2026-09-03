@@ -1,0 +1,57 @@
+name: Feature request
+description: Suggest a capability or an improvement.
+labels: [enhancement, needs-triage]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include tokens, sharing links, real URLs, tenant identifiers or personal data.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to accomplish, and what makes it hard today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have considered
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Tenant setup and consent
+        - SharePoint browsing
+        - OneDrive browsing
+        - Link creation
+        - Manifests
+        - Job history and profiles
+        - Diagnostics
+        - Accessibility
+        - Packaging and distribution
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: permissions
+    attributes:
+      label: Permissions
+      options:
+        - label: >
+            I understand that a feature needing a broader Microsoft Graph permission may be
+            declined, or made optional, to keep the default permission set least-privileged.
+          required: true

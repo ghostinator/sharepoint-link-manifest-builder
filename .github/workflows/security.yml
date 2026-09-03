@@ -1,0 +1,124 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, so a newly disclosed dependency advisory is caught even with no commits.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  publication-safety:
+    name: Publication safety scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out with full history
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # The whole history is needed: .gitignore does nothing about content that was
+          # already committed, so a shallow clone would miss exactly what this scan is for.
+          fetch-depth: 0
+
+      - name: Scan working tree and history for secrets and tenant data
+        run: ./scripts/scan-secrets.sh
+
+      - name: Upload publication readiness report
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: publication-readiness-report
+          path: artifacts/publication-readiness-report.txt
+          retention-days: 30
+          if-no-files-found: warn
+
+  dependency-audit:
+    name: Dependency audit and SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore SharePointLinkManifestBuilder.slnx
+
+      - name: Fail on any vulnerable package
+        run: |
+          set -euo pipefail
+          output="$(dotnet list SharePointLinkManifestBuilder.slnx package --vulnerable --include-transitive)"
+          echo "${output}"
+          if echo "${output}" | grep -qiE '\bhas the following vulnerable packages'; then
+            echo "::error::Vulnerable packages were found."
+            exit 1
+          fi
+
+      - name: Report deprecated packages
+        continue-on-error: true
+        run: dotnet list SharePointLinkManifestBuilder.slnx package --deprecated
+
+      - name: Generate dependency inventory
+        run: ./scripts/sbom.sh
+
+      - name: Upload dependency inventory
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: sbom
+          path: artifacts/sbom/
+          retention-days: 30
+          if-no-files-found: warn
+
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    # Only meaningful on a pull request, where there is a base to compare against.
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: always
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@6f5948dfacef28e207b48d0905cf90c03365536d # v3
+        with:
+          languages: csharp
+          queries: security-and-quality
+
+      - name: Build for analysis
+        run: dotnet build SharePointLinkManifestBuilder.slnx --configuration Release
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@6f5948dfacef28e207b48d0905cf90c03365536d # v3
+        with:
+          category: /language:csharp
