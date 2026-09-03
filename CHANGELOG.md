@@ -22,6 +22,21 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A sign-in that never returned from the browser wedged the setup wizard.** Interactive
+  sign-in and administrator consent both complete only when Microsoft Entra redirects back to
+  the loopback listener. When Entra instead shows an error *in the browser* — a wrong-but-valid
+  client ID being the common case — no redirect is ever sent, so the awaited task never
+  finished. The generated `AsyncRelayCommand` reports `CanExecute` as false while it runs, which
+  disabled the very button needed to retry, and `CanGoBack` is gated on `IsBusy`, which disabled
+  Back as well. Correcting the IDs left no way to act on the correction. Both steps are now
+  cancellable from the UI and bounded by a five-minute timeout, and a timeout is reported
+  distinctly from a cancellation.
+- **Automatic tenant setup could not be selected.** The method was disabled unless a bootstrap
+  client ID was already configured, but the Advanced field that supplies one sits on the
+  automatic path — so the only route to enabling automatic setup was reachable only after it was
+  already enabled. Since this repository ships no bootstrap client ID by design, automatic setup
+  was unreachable in every build. The method is now always selectable and the run is guarded
+  instead, which is where the check belonged.
 - **Sign-in failures were undiagnosable.** MSAL exceptions were normalized into a sanitized
   user-facing error without being logged first, so the OAuth error code, the `AADSTSnnnnn`
   code and the correlation ID were all discarded. Any unclassified failure became the single

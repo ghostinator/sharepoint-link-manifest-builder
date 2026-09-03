@@ -73,6 +73,18 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     private readonly ApplicationPaths _paths;
     private readonly ILogger<TenantSetupViewModel> _logger;
 
+    /// <summary>
+    /// How long to wait for a step that depends on the user returning from the system browser.
+    /// <para>
+    /// Both interactive sign-in and administrator consent finish only when Microsoft Entra
+    /// redirects back to the loopback listener. When Entra instead shows an error *in the
+    /// browser* — a wrong client ID being the common case — no redirect is ever sent, and
+    /// without a bound the wait never ends. It is generous on purpose: multi-factor prompts,
+    /// password changes and Conditional Access can all legitimately take minutes.
+    /// </para>
+    /// </summary>
+    private static readonly TimeSpan BrowserRoundTripTimeout = TimeSpan.FromMinutes(5);
+
     /// <summary>The page currently shown.</summary>
     [ObservableProperty]
     private SetupWizardPage _currentPage = SetupWizardPage.Welcome;
@@ -202,6 +214,16 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     public ProductMetadata Product => _productMetadata.Metadata;
 
     /// <summary>True when a publisher has configured a bootstrap identity.</summary>
+    /// <summary>
+    /// True when a bootstrap client ID is configured, so automatic setup is ready to run.
+    /// <para>
+    /// This is deliberately <em>not</em> what gates selecting the automatic method. This build
+    /// ships no bootstrap client ID, and the Advanced field that supplies one lives on the
+    /// automatic path — so gating selection on this made the only way to enable automatic setup
+    /// reachable only after it was already enabled. Selecting the method is always allowed; the
+    /// run is guarded instead, in CreateRegistrationAsync.
+    /// </para>
+    /// </summary>
     public bool IsAutomaticSetupAvailable => _bootstrap.Current.IsConfigured;
 
     /// <summary>Why automatic setup is unavailable, when it is.</summary>
@@ -340,7 +362,7 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     /// Signs in through the system browser. For the existing-registration path this uses the
     /// supplied client ID; for automatic setup it uses the publisher's bootstrap identity.
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(IncludeCancelCommand = true)]
     private async Task SignInAsync(CancellationToken cancellationToken)
     {
         ClearMessages();
@@ -395,12 +417,24 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
                 ? GraphScopes.BootstrapCreateOnlyTier.Select(p => p.Scope).ToArray()
                 : configuration.RequiredScopes.ToArray();
 
-            var result = await _authentication.SignInAsync(scopes, cancellationToken: cancellationToken)
+            using var timeout = new CancellationTokenSource(BrowserRoundTripTimeout);
+            using var linked = CancellationTokenSource
+                .CreateLinkedTokenSource(cancellationToken, timeout.Token);
+
+            var result = await _authentication.SignInAsync(scopes, cancellationToken: linked.Token)
                 .ConfigureAwait(true);
 
             if (!result.Succeeded)
             {
-                ErrorMessage = Describe(result.Error);
+                // A timeout and a deliberate cancellation both arrive as a cancelled result, but
+                // they mean different things to the user and only one of them is their doing.
+                ErrorMessage = timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested
+                    ? "Sign-in did not complete within five minutes, so it was stopped. If the "
+                      + "browser showed an error instead of returning here, the Application "
+                      + "(client) ID or Directory (tenant) ID is usually wrong. Correct them and "
+                      + "sign in again."
+                    : Describe(result.Error);
+
                 return;
             }
 
@@ -492,7 +526,7 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     }
 
     /// <summary>Opens Microsoft's official administrator consent experience.</summary>
-    [RelayCommand]
+    [RelayCommand(IncludeCancelCommand = true)]
     private async Task RequestConsentAsync(CancellationToken cancellationToken)
     {
         ClearMessages();
@@ -509,11 +543,15 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
 
         try
         {
+            using var timeout = new CancellationTokenSource(BrowserRoundTripTimeout);
+            using var linked = CancellationTokenSource
+                .CreateLinkedTokenSource(cancellationToken, timeout.Token);
+
             var outcome = await _consentService
                 .RequestAdminConsentAsync(
                     tenant,
                     RequestedPermissions.ToArray(),
-                    cancellationToken: cancellationToken)
+                    cancellationToken: linked.Token)
                 .ConfigureAwait(true);
 
             await _auditStore.AppendAsync(new RegistrationAuditEntry

@@ -67,13 +67,20 @@
 
           <Border Classes="Card">
             <StackPanel Spacing="6">
+              <!-- Always selectable. The bootstrap client ID this method needs is supplied by
+                   the Advanced field further along the automatic path, so disabling the method
+                   when no bootstrap ID is configured made that field unreachable. The run
+                   itself is guarded in CreateRegistrationAsync. -->
               <RadioButton GroupName="method" Content="Automatic tenant setup"
-                           IsEnabled="{Binding IsAutomaticSetupAvailable}"
                            IsChecked="{Binding Method, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Automatic}" />
               <TextBlock Classes="Body" Margin="26,0,0,0"
                          Text="This application creates an app registration in your Microsoft Entra tenant for you. It needs an authorized account and a publisher-supplied bootstrap identity." />
               <Border Classes="Warning" Margin="26,6,0,0" IsVisible="{Binding !IsAutomaticSetupAvailable}">
-                <TextBlock Text="{Binding AutomaticSetupUnavailableReason}" Classes="Body" />
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding AutomaticSetupUnavailableReason}" Classes="Body" />
+                  <TextBlock Classes="Body" TextWrapping="Wrap"
+                             Text="You can still choose this method and supply your own bootstrap client ID under 'Advanced' on the next page. The bootstrap registration must be a multitenant public client with the delegated permissions User.Read and AppRegistration.Create. See docs/ENTRA-SETUP.md section 6." />
+                </StackPanel>
               </Border>
             </StackPanel>
           </Border>
@@ -142,8 +149,16 @@
             </StackPanel>
           </Expander>
 
-          <Button Content="Sign in with Microsoft" Classes="Primary"
-                  Command="{Binding SignInCommand}" HorizontalAlignment="Left" />
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+            <Button Content="Sign in with Microsoft" Classes="Primary"
+                    Command="{Binding SignInCommand}" />
+            <Button Content="Cancel sign-in"
+                    Command="{Binding SignInCancelCommand}"
+                    IsVisible="{Binding IsBusy}"
+                    AutomationProperties.Name="Cancel the sign-in in progress" />
+          </StackPanel>
+          <TextBlock Classes="Subtle" TextWrapping="Wrap" IsVisible="{Binding IsBusy}"
+                     Text="Waiting for you to finish in the browser. If the browser shows an error instead of returning here, cancel and check the IDs above." />
 
           <Border Classes="Notice"
                   IsVisible="{Binding SignedInAccount, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -253,6 +268,10 @@
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Button Content="Continue to Microsoft admin consent" Classes="Primary"
                     Command="{Binding RequestConsentCommand}" />
+            <Button Content="Cancel"
+                    Command="{Binding RequestConsentCancelCommand}"
+                    IsVisible="{Binding IsBusy}"
+                    AutomationProperties.Name="Cancel the consent request in progress" />
             <Button Content="Copy consent link" Command="{Binding CopyConsentLinkCommand}" />
             <Button Content="Save as pending approval" Command="{Binding SaveAsPendingCommand}" />
           </StackPanel>
