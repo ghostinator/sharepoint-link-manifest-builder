@@ -26,10 +26,10 @@
       <Button Content="Back" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}" />
       <Button Content="Next" Classes="Primary" Command="{Binding NextCommand}"
               IsVisible="{Binding !IsOnLastPage}" />
-      <Button Content="Continue to resource selection" Classes="Primary"
+      <Button Content="Continue to a new link job" Classes="Primary"
               IsVisible="{Binding IsOnLastPage}"
               Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
-              CommandParameter="sharepoint" />
+              CommandParameter="job" />
       <ProgressBar IsIndeterminate="True" Width="120" IsVisible="{Binding IsBusy}"
                    AutomationProperties.Name="Working" />
     </StackPanel>

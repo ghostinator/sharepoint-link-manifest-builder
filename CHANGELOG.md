@@ -50,6 +50,14 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The resource browsers are steps of a job rather than separate pages.** SharePoint Sites and
+  OneDrive have left the sidebar and open as tabs inside New Link Job, from the Targets step,
+  each with a **Done — back to targets** action. Selecting what to process is part of building a
+  job, and having the browsers as destinations of their own made it a detour with no signposted
+  way back — the Targets step said "add locations from the SharePoint Sites or OneDrive pages"
+  and then offered no route home. Back and Next skip the browse tabs while they are closed, and
+  the position label counts only the six numbered steps.
+
 - **Verification states a single PASS or FAIL.** The verdict came from reading three separate
   lists and inferring one, and "Not checked" in particular read as a failure when it means the
   opposite — there was no independent evidence to gather, because confirming those items would

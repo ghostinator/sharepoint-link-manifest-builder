@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+             xmlns:views="using:SharePointLinkManifestBuilder.App.Views"
              xmlns:models="using:SharePointLinkManifestBuilder.Core.Models"
              xmlns:conv="using:SharePointLinkManifestBuilder.App.Converters"
              x:Class="SharePointLinkManifestBuilder.App.Views.NewLinkJobView"
@@ -39,14 +40,10 @@
         <DockPanel Margin="0,12">
           <StackPanel DockPanel.Dock="Top" Spacing="8">
             <TextBlock Classes="Body"
-                       Text="Add locations from the SharePoint Sites or OneDrive pages. Each target can include subfolders or not, independently." />
+                       Text="Browse SharePoint or OneDrive to add locations. Each target can include subfolders or not, independently." />
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Content="Browse SharePoint"
-                      Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
-                      CommandParameter="sharepoint" />
-              <Button Content="Browse OneDrive"
-                      Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
-                      CommandParameter="onedrive" />
+              <Button Content="Browse SharePoint" Command="{Binding BrowseSharePointCommand}" />
+              <Button Content="Browse OneDrive" Command="{Binding BrowseOneDriveCommand}" />
               <Button Content="Remove all targets" Command="{Binding ClearTargetsCommand}" />
             </StackPanel>
             <TextBlock Classes="Subtle" Text="No targets yet. Use the browse buttons above."
@@ -88,6 +85,37 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ==================== BROWSE (hidden until asked for) ==================== -->
+      <TabItem Header="Browse SharePoint" IsVisible="{Binding IsBrowsingSharePoint}">
+        <DockPanel Margin="0,12">
+          <Border DockPanel.Dock="Bottom" Classes="Notice" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Button Content="Done — back to targets" Classes="Primary"
+                      Command="{Binding ReturnToTargetsCommand}"
+                      AutomationProperties.Name="Finish choosing locations and return to targets" />
+              <TextBlock VerticalAlignment="Center" Classes="Body"
+                         Text="{Binding Targets.Count, StringFormat='{}{0} target(s) selected so far.'}" />
+            </StackPanel>
+          </Border>
+          <views:SharePointBrowserView DataContext="{Binding SharePointBrowser}" />
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Browse OneDrive" IsVisible="{Binding IsBrowsingOneDrive}">
+        <DockPanel Margin="0,12">
+          <Border DockPanel.Dock="Bottom" Classes="Notice" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Button Content="Done — back to targets" Classes="Primary"
+                      Command="{Binding ReturnToTargetsCommand}"
+                      AutomationProperties.Name="Finish choosing locations and return to targets" />
+              <TextBlock VerticalAlignment="Center" Classes="Body"
+                         Text="{Binding Targets.Count, StringFormat='{}{0} target(s) selected so far.'}" />
+            </StackPanel>
+          </Border>
+          <views:OneDriveBrowserView DataContext="{Binding OneDriveBrowser}" />
         </DockPanel>
       </TabItem>
 

@@ -34,8 +34,26 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
     private PauseToken? _pauseToken;
     private JobPreview? _preview;
 
-    /// <summary>How many steps the job page has. The step tabs are numbered 1 to this.</summary>
+    /// <summary>How many numbered steps the job page has.</summary>
     public const int StepCount = 6;
+
+    /// <summary>
+    /// Tab indices. The two browse tabs sit between Targets and Link so that choosing locations
+    /// reads as part of step 1 rather than as leaving the job, and they are hidden until asked
+    /// for. Indices are positional in the TabControl, so hidden tabs still occupy one -- which is
+    /// what keeps these constants stable however the visibility changes.
+    /// </summary>
+    private const int TargetsTab = 0;
+    private const int BrowseSharePointTab = 1;
+    private const int BrowseOneDriveTab = 2;
+    private const int FirstNumberedTabAfterBrowsing = 3;
+    private const int LastTab = 7;
+
+    /// <summary>The SharePoint browser, hosted inside this page rather than beside it.</summary>
+    public SharePointBrowserViewModel SharePointBrowser { get; }
+
+    /// <summary>The OneDrive browser, hosted inside this page rather than beside it.</summary>
+    public OneDriveBrowserViewModel OneDriveBrowser { get; }
 
     /// <summary>The tab currently shown: 0 targets, 1 link, 2 manifest, 3 filters, 4 preview, 5 results.</summary>
     [ObservableProperty]
@@ -45,7 +63,30 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
     private int _selectedTabIndex;
 
     /// <summary>A human-readable position, for the label between the Back and Next buttons.</summary>
-    public string StepPosition => $"Step {SelectedTabIndex + 1} of {StepCount}";
+    public string StepPosition => SelectedTabIndex switch
+    {
+        BrowseSharePointTab => "Choosing SharePoint locations",
+        BrowseOneDriveTab => "Choosing OneDrive locations",
+        TargetsTab => $"Step 1 of {StepCount}",
+        _ => $"Step {SelectedTabIndex - FirstNumberedTabAfterBrowsing + 2} of {StepCount}",
+    };
+
+    /// <summary>True while the SharePoint browse tab should be shown.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StepPosition))]
+    [NotifyCanExecuteChangedFor(nameof(PreviousStepCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextStepCommand))]
+    private bool _isBrowsingSharePoint;
+
+    /// <summary>True while the OneDrive browse tab should be shown.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StepPosition))]
+    [NotifyCanExecuteChangedFor(nameof(PreviousStepCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextStepCommand))]
+    private bool _isBrowsingOneDrive;
+
+    /// <summary>True when either browse tab is showing, so the page can offer a way back.</summary>
+    public bool IsBrowsing => IsBrowsingSharePoint || IsBrowsingOneDrive;
 
     /// <summary>Requested link permission.</summary>
     [ObservableProperty]
@@ -213,9 +254,16 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
         IProductMetadataProvider productMetadata,
         IClipboardService clipboard,
         ISystemBrowser browser,
+        SharePointBrowserViewModel sharePointBrowser,
+        OneDriveBrowserViewModel oneDriveBrowser,
         ILogger<NewLinkJobViewModel> logger)
         : base("New Link Job", "job")
     {
+        SharePointBrowser = sharePointBrowser
+            ?? throw new ArgumentNullException(nameof(sharePointBrowser));
+
+        OneDriveBrowser = oneDriveBrowser ?? throw new ArgumentNullException(nameof(oneDriveBrowser));
+
         _runner = runner ?? throw new ArgumentNullException(nameof(runner));
         _connection = connection ?? throw new ArgumentNullException(nameof(connection));
         _draft = draft ?? throw new ArgumentNullException(nameof(draft));
@@ -874,15 +922,95 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
         StartCommand.NotifyCanExecuteChanged();
     }
 
-    /// <summary>Moves to the previous step.</summary>
+    /// <summary>Whether a tab index is currently showing.</summary>
+    private bool IsTabVisible(int index) => index switch
+    {
+        BrowseSharePointTab => IsBrowsingSharePoint,
+        BrowseOneDriveTab => IsBrowsingOneDrive,
+        _ => true,
+    };
+
+    /// <summary>
+    /// The next showing tab in a direction, or null when there is none. Back and Next have to
+    /// skip hidden tabs: a hidden tab still occupies an index, so stepping by one would land on
+    /// a tab that renders nothing.
+    /// </summary>
+    private int? AdjacentVisibleTab(int direction)
+    {
+        for (var index = SelectedTabIndex + direction; index >= 0 && index <= LastTab; index += direction)
+        {
+            if (IsTabVisible(index))
+            {
+                return index;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Moves to the previous step that is showing.</summary>
     [RelayCommand(CanExecute = nameof(CanGoToPreviousStep))]
-    private void PreviousStep() => SelectedTabIndex--;
+    private void PreviousStep()
+    {
+        if (AdjacentVisibleTab(-1) is { } index)
+        {
+            SelectedTabIndex = index;
+        }
+    }
 
-    private bool CanGoToPreviousStep() => SelectedTabIndex > 0;
+    private bool CanGoToPreviousStep() => AdjacentVisibleTab(-1) is not null;
 
-    /// <summary>Moves to the next step.</summary>
+    /// <summary>Moves to the next step that is showing.</summary>
     [RelayCommand(CanExecute = nameof(CanGoToNextStep))]
-    private void NextStep() => SelectedTabIndex++;
+    private void NextStep()
+    {
+        if (AdjacentVisibleTab(1) is { } index)
+        {
+            SelectedTabIndex = index;
+        }
+    }
 
-    private bool CanGoToNextStep() => SelectedTabIndex < StepCount - 1;
+    private bool CanGoToNextStep() => AdjacentVisibleTab(1) is not null;
+
+    /// <summary>Opens the SharePoint browser as a step of this job.</summary>
+    [RelayCommand]
+    private async Task BrowseSharePointAsync(CancellationToken cancellationToken)
+    {
+        IsBrowsingSharePoint = true;
+        SelectedTabIndex = BrowseSharePointTab;
+        OnPropertyChanged(nameof(IsBrowsing));
+
+        // The browser used to be a page, so it loaded when navigated to. Hosting it here means
+        // this call is what replaces that.
+        await SharePointBrowser.OnNavigatedToAsync(cancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Opens the OneDrive browser as a step of this job.</summary>
+    [RelayCommand]
+    private async Task BrowseOneDriveAsync(CancellationToken cancellationToken)
+    {
+        IsBrowsingOneDrive = true;
+        SelectedTabIndex = BrowseOneDriveTab;
+        OnPropertyChanged(nameof(IsBrowsing));
+
+        await OneDriveBrowser.OnNavigatedToAsync(cancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Returns to the targets step and puts the browse tabs away.
+    /// <para>
+    /// Both are closed rather than only the one being left, so the tab strip returns to the six
+    /// numbered steps and does not accumulate browse tabs from earlier in the session. The
+    /// selections themselves live in the shared draft and are unaffected.
+    /// </para>
+    /// </summary>
+    [RelayCommand]
+    private void ReturnToTargets()
+    {
+        IsBrowsingSharePoint = false;
+        IsBrowsingOneDrive = false;
+        OnPropertyChanged(nameof(IsBrowsing));
+        SelectedTabIndex = TargetsTab;
+        RefreshTargets();
+    }
 }
