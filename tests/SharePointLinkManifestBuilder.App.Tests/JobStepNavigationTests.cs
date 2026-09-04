@@ -6,17 +6,14 @@ using SharePointLinkManifestBuilder.Core.Settings;
 namespace SharePointLinkManifestBuilder.App.Tests;
 
 /// <summary>
-/// The resource browsers are steps of the job rather than separate destinations. Back and Next
-/// therefore have to walk the tabs that are actually showing: a hidden tab still occupies an
-/// index, so stepping by one would land on a tab that renders nothing.
+/// The resource browsers live inside the Targets step rather than as tabs of their own, so the
+/// numbered strip stays exactly six wide and choosing locations never moves the selected step.
 /// </summary>
 public sealed class JobStepNavigationTests : IDisposable
 {
     private const int TargetsTab = 0;
-    private const int BrowseSharePointTab = 1;
-    private const int BrowseOneDriveTab = 2;
-    private const int LinkTab = 3;
-    private const int ResultsTab = 7;
+    private const int LinkTab = 1;
+    private const int ResultsTab = 5;
 
     private readonly string _stateDirectory;
     private readonly ServiceProvider _services;
@@ -55,12 +52,9 @@ public sealed class JobStepNavigationTests : IDisposable
         Assert.Equal(TargetsTab, job.SelectedTabIndex);
     }
 
-    /// <summary>
-    /// The key property: with the browse tabs hidden, Next from Targets must reach Link, not the
-    /// hidden SharePoint tab immediately after it.
-    /// </summary>
+    /// <summary>The numbered strip is contiguous, so Next from Targets reaches Link.</summary>
     [Fact]
-    public void Next_FromTargets_SkipsTheHiddenBrowseTabs()
+    public void Next_FromTargets_ReachesLink()
     {
         var job = Job();
 
@@ -69,21 +63,21 @@ public sealed class JobStepNavigationTests : IDisposable
         Assert.Equal(LinkTab, job.SelectedTabIndex);
     }
 
-    /// <summary>And Back from Link must return to Targets rather than a hidden tab.</summary>
+    /// <summary>Browsing must not shift the numbered steps.</summary>
     [Fact]
-    public void Previous_FromLink_SkipsTheHiddenBrowseTabs()
+    public async Task Next_WhileBrowsing_StillReachesLink()
     {
         var job = Job();
-        job.SelectedTabIndex = LinkTab;
+        await job.BrowseSharePointCommand.ExecuteAsync(null);
 
-        job.PreviousStepCommand.Execute(null);
+        job.NextStepCommand.Execute(null);
 
-        Assert.Equal(TargetsTab, job.SelectedTabIndex);
+        Assert.Equal(LinkTab, job.SelectedTabIndex);
     }
 
-    /// <summary>Opening a browser shows its tab and selects it.</summary>
+    /// <summary>Browsing opens inside the Targets step and leaves it selected.</summary>
     [Fact]
-    public async Task BrowseSharePoint_ShowsAndSelectsThatTab()
+    public async Task BrowseSharePoint_StaysOnTheTargetsStep()
     {
         var job = Job();
 
@@ -91,20 +85,42 @@ public sealed class JobStepNavigationTests : IDisposable
 
         Assert.True(job.IsBrowsingSharePoint);
         Assert.True(job.IsBrowsing);
-        Assert.Equal(BrowseSharePointTab, job.SelectedTabIndex);
+        Assert.Equal(TargetsTab, job.SelectedTabIndex);
         Assert.False(job.IsBrowsingOneDrive);
     }
 
-    /// <summary>The OneDrive browser behaves the same way.</summary>
+    /// <summary>Only one browser shows at a time, so switching replaces rather than stacks.</summary>
     [Fact]
-    public async Task BrowseOneDrive_ShowsAndSelectsThatTab()
+    public async Task SwitchingBrowsers_ShowsOnlyTheNewOne()
     {
         var job = Job();
 
+        await job.BrowseSharePointCommand.ExecuteAsync(null);
         await job.BrowseOneDriveCommand.ExecuteAsync(null);
 
         Assert.True(job.IsBrowsingOneDrive);
-        Assert.Equal(BrowseOneDriveTab, job.SelectedTabIndex);
+        Assert.False(job.IsBrowsingSharePoint);
+        Assert.Equal(TargetsTab, job.SelectedTabIndex);
+    }
+
+    /// <summary>
+    /// Stepping away from Targets puts the browsers away, so coming back shows the target list
+    /// the user just built rather than the browser they left open.
+    /// </summary>
+    [Fact]
+    public async Task LeavingTheTargetsStep_ClosesTheBrowsers()
+    {
+        var job = Job();
+        await job.BrowseSharePointCommand.ExecuteAsync(null);
+
+        job.NextStepCommand.Execute(null);
+
+        Assert.False(job.IsBrowsing);
+
+        job.PreviousStepCommand.Execute(null);
+
+        Assert.Equal(TargetsTab, job.SelectedTabIndex);
+        Assert.False(job.IsBrowsing);
     }
 
     /// <summary>
@@ -126,19 +142,6 @@ public sealed class JobStepNavigationTests : IDisposable
         Assert.Equal(TargetsTab, job.SelectedTabIndex);
     }
 
-    /// <summary>While a browse tab is open, Next must step through it rather than over it.</summary>
-    [Fact]
-    public async Task Next_FromTargets_EntersAVisibleBrowseTab()
-    {
-        var job = Job();
-        await job.BrowseSharePointCommand.ExecuteAsync(null);
-        job.SelectedTabIndex = TargetsTab;
-
-        job.NextStepCommand.Execute(null);
-
-        Assert.Equal(BrowseSharePointTab, job.SelectedTabIndex);
-    }
-
     /// <summary>Navigation stops at the ends rather than wrapping, which would misread as a loop.</summary>
     [Fact]
     public void Navigation_StopsAtBothEnds()
@@ -154,11 +157,11 @@ public sealed class JobStepNavigationTests : IDisposable
     }
 
     /// <summary>
-    /// The position label counts the six numbered steps and names the browse tabs instead of
-    /// numbering them, so "Step 3 of 6" always means the same tab.
+    /// The six numbered steps map straight onto their indices, and browsing annotates step 1
+    /// rather than becoming a step of its own.
     /// </summary>
     [Fact]
-    public async Task StepPosition_NumbersOnlyTheNumberedSteps()
+    public async Task StepPosition_TracksTheSixNumberedSteps()
     {
         var job = Job();
 
@@ -171,7 +174,7 @@ public sealed class JobStepNavigationTests : IDisposable
         Assert.Equal("Step 6 of 6", job.StepPosition);
 
         await job.BrowseSharePointCommand.ExecuteAsync(null);
-        Assert.Equal("Choosing SharePoint locations", job.StepPosition);
+        Assert.Equal("Step 1 of 6 — choosing locations", job.StepPosition);
     }
 
     /// <summary>The job page owns the browsers, so both are reachable from it.</summary>

@@ -37,7 +37,33 @@
 
       <!-- ============================ TARGETS ============================ -->
       <TabItem Header="1. Targets">
-        <DockPanel Margin="0,12">
+        <Grid RowDefinitions="Auto,*" Margin="0,12">
+
+          <!-- The browse bar sits directly under the numbered strip and only while browsing.
+               Keeping it here rather than in the strip is what stops choosing locations from
+               moving the selected step: this is all still step 1. -->
+          <Border Grid.Row="0" Classes="Notice" IsVisible="{Binding IsBrowsing}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="Browse SharePoint" Command="{Binding BrowseSharePointCommand}"
+                      IsEnabled="{Binding !IsBrowsingSharePoint}" />
+              <Button Content="Browse OneDrive" Command="{Binding BrowseOneDriveCommand}"
+                      IsEnabled="{Binding !IsBrowsingOneDrive}" />
+              <Button Content="Done" Classes="Primary" Command="{Binding ReturnToTargetsCommand}"
+                      AutomationProperties.Name="Finish choosing locations and return to the target list" />
+              <TextBlock VerticalAlignment="Center" Classes="Body"
+                         Text="{Binding Targets.Count, StringFormat='{}{0} target(s) selected'}" />
+            </StackPanel>
+          </Border>
+
+          <ContentControl Grid.Row="1" IsVisible="{Binding IsBrowsingSharePoint}">
+            <views:SharePointBrowserView DataContext="{Binding SharePointBrowser}" />
+          </ContentControl>
+
+          <ContentControl Grid.Row="1" IsVisible="{Binding IsBrowsingOneDrive}">
+            <views:OneDriveBrowserView DataContext="{Binding OneDriveBrowser}" />
+          </ContentControl>
+
+        <DockPanel Grid.Row="1" IsVisible="{Binding !IsBrowsing}">
           <StackPanel DockPanel.Dock="Top" Spacing="8">
             <TextBlock Classes="Body"
                        Text="Browse SharePoint or OneDrive to add locations. Each target can include subfolders or not, independently." />
@@ -86,37 +112,7 @@
             </ItemsControl>
           </ScrollViewer>
         </DockPanel>
-      </TabItem>
-
-      <!-- ==================== BROWSE (hidden until asked for) ==================== -->
-      <TabItem Header="Browse SharePoint" IsVisible="{Binding IsBrowsingSharePoint}">
-        <DockPanel Margin="0,12">
-          <Border DockPanel.Dock="Bottom" Classes="Notice" Margin="0,12,0,0">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-              <Button Content="Done — back to targets" Classes="Primary"
-                      Command="{Binding ReturnToTargetsCommand}"
-                      AutomationProperties.Name="Finish choosing locations and return to targets" />
-              <TextBlock VerticalAlignment="Center" Classes="Body"
-                         Text="{Binding Targets.Count, StringFormat='{}{0} target(s) selected so far.'}" />
-            </StackPanel>
-          </Border>
-          <views:SharePointBrowserView DataContext="{Binding SharePointBrowser}" />
-        </DockPanel>
-      </TabItem>
-
-      <TabItem Header="Browse OneDrive" IsVisible="{Binding IsBrowsingOneDrive}">
-        <DockPanel Margin="0,12">
-          <Border DockPanel.Dock="Bottom" Classes="Notice" Margin="0,12,0,0">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-              <Button Content="Done — back to targets" Classes="Primary"
-                      Command="{Binding ReturnToTargetsCommand}"
-                      AutomationProperties.Name="Finish choosing locations and return to targets" />
-              <TextBlock VerticalAlignment="Center" Classes="Body"
-                         Text="{Binding Targets.Count, StringFormat='{}{0} target(s) selected so far.'}" />
-            </StackPanel>
-          </Border>
-          <views:OneDriveBrowserView DataContext="{Binding OneDriveBrowser}" />
-        </DockPanel>
+        </Grid>
       </TabItem>
 
       <!-- ============================ LINK ============================ -->
