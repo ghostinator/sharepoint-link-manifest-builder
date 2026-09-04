@@ -7,7 +7,20 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **A cancelled job reported zeros for everything it had already done.** Cancelling makes every
+  in-flight task throw, so `Task.WhenAll` threw, so the method collecting per-file results never
+  reached its `return` — and the caller's `results.AddRange(await …)` never ran. The results were
+  never lost, only discarded on the way out: they were already in the list, added as each file
+  finished. A run that had created hundreds of links reported none, in the summary and in job
+  history, while the links themselves existed in the tenant. Partial results are now returned,
+  and cancellation is detected from the token rather than from an exception.
+- **Manifests were not written after cancellation, despite the code saying they were.** The
+  cancelled token was passed straight to the manifest write, so it threw on its first await. A
+  cancelled run therefore created links and then wrote nothing describing them — the exact
+  situation the surrounding comment existed to prevent. The write now gets a short budget of its
+  own, and says in the log that it is running.
 
 ## [0.1.0] - 2026-09-04
 

@@ -298,6 +298,12 @@ public sealed class LinkJobRunner : ILinkJobRunner
         };
     }
 
+    /// <summary>
+    /// How long manifest writing may continue after the job was cancelled. Short on purpose: it
+    /// exists to record links that already exist, not to keep working against the user's wish.
+    /// </summary>
+    private static readonly TimeSpan ManifestWriteAfterCancelBudget = TimeSpan.FromSeconds(30);
+
     /// <inheritdoc />
     public async Task<JobSummary> RunAsync(
         JobConfiguration configuration,
@@ -343,20 +349,52 @@ public sealed class LinkJobRunner : ILinkJobRunner
         }
         catch (OperationCanceledException)
         {
+            // Reached only when cancellation happens before CreateLinksAsync can return, such
+            // as before the first file starts. Ordinary mid-run cancellation returns partial
+            // results instead of throwing, and is detected below.
             finalPhase = JobPhase.Cancelled;
+        }
+
+        // Cancellation is read from the token, not inferred from an exception, because
+        // CreateLinksAsync now returns its partial results rather than throwing them away.
+        if (cancellationToken.IsCancellationRequested)
+        {
+            finalPhase = JobPhase.Cancelled;
+
             _logger.LogInformation(
-                "Job cancelled after processing {Count} file(s). Completed results are preserved.",
+                "Job cancelled after processing {Count} file(s). Those results are preserved and "
+                + "reported, because the links they describe exist in the tenant.",
                 results.Count);
         }
 
         // Manifests are written even after cancellation, because the successes already produced
-        // are real and discarding them would waste the tenant writes that created them.
+        // are real and discarding them would waste the tenant writes that created them, leaving
+        // links that exist but that nothing records.
+        //
+        // That needs its own token. Passing the cancelled one made this block throw on its first
+        // await, so the promise in the comment above was never kept: a cancelled run created
+        // links and then wrote nothing describing them. The window is deliberately short, and
+        // cancelling again during it does stop the writes.
         if (results.Any(r => r.IsSuccess))
         {
+            using var manifestCancellation = cancellationToken.IsCancellationRequested
+                ? new CancellationTokenSource(ManifestWriteAfterCancelBudget)
+                : null;
+
+            var manifestToken = manifestCancellation?.Token ?? cancellationToken;
+
+            if (manifestCancellation is not null)
+            {
+                _logger.LogInformation(
+                    "Writing manifests for the {Count} link(s) already created, despite the "
+                    + "cancellation, so they are not left unrecorded.",
+                    results.Count(r => r.IsSuccess));
+            }
+
             try
             {
                 manifests.AddRange(await WriteManifestsAsync(
-                    configuration, preview.Preflight.ResolvedTargets, results, progress, cancellationToken)
+                    configuration, preview.Preflight.ResolvedTargets, results, progress, manifestToken)
                     .ConfigureAwait(false));
             }
             catch (OperationCanceledException)
@@ -510,7 +548,30 @@ public sealed class LinkJobRunner : ILinkJobRunner
             }
         });
 
-        await Task.WhenAll(tasks).ConfigureAwait(false);
+        try
+        {
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Swallowed on purpose, and this is the whole point of the method's contract.
+            //
+            // Cancelling makes every in-flight task throw, so WhenAll throws, so this method
+            // used to unwind without ever reaching the return below. The caller's
+            // `results.AddRange(await CreateLinksAsync(...))` therefore never ran and the list
+            // it was adding to stayed empty -- a cancelled job reported zero created, zero
+            // reused, zero failed, however many links it had actually made in the tenant.
+            //
+            // The results are not lost when the exception is thrown; they are already in this
+            // list, added under resultsLock as each file finished. Returning them is all that
+            // was ever needed. The caller distinguishes a cancelled run by inspecting the
+            // token, not by catching this.
+            _logger.LogInformation(
+                "Cancelled with {Count} of {Total} file(s) already processed. "
+                + "Those results are real and are preserved.",
+                results.Count,
+                candidates.Count);
+        }
 
         return results;
     }
