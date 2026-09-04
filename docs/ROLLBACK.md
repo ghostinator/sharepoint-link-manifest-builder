@@ -126,9 +126,9 @@ Consult **Job History** for exactly what a run did: targets, counts and manifest
 
 | Change | How to undo |
 |---|---|
-| Local configuration | *Remove local configuration* on the Permissions page |
+| Local configuration | *Remove local configuration* on the Permissions tab in Settings |
 | Consent | Revoke it in the Microsoft Entra admin center (enterprise applications) |
-| App registration created by the application | Delete it in Entra, or use the guarded delete on the Permissions page |
+| App registration created by the application | Delete it in Entra, or use the guarded delete on the Permissions tab in Settings |
 
-The Permissions page shows a local audit history of every tenant change the application made,
+The Permissions tab in Settings shows a local audit history of every tenant change the application made,
 which is the fastest way to see what needs undoing.

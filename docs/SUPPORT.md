@@ -3,8 +3,8 @@
 ## Before asking
 
 1. **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** covers most errors and what to do about each.
-2. **Diagnostics page** — run the connectivity test and read the sanitized recent errors.
-3. **Permissions page** — a surprising number of problems are a missing scope.
+2. **Diagnostics tab in Settings** — run the connectivity test and read the sanitized recent errors.
+3. **Permissions tab in Settings** — a surprising number of problems are a missing scope.
 4. **Try a dry run** — it isolates enumeration and permission problems from link creation.
 
 ## Where to ask

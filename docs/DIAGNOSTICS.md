@@ -1,6 +1,6 @@
 # Diagnostics
 
-## The Diagnostics page
+## The Diagnostics tab in Settings
 
 ### Environment
 

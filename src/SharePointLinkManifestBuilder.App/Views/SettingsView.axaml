@@ -1,13 +1,18 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SharePointLinkManifestBuilder.App.ViewModels"
+             xmlns:views="using:SharePointLinkManifestBuilder.App.Views"
              x:Class="SharePointLinkManifestBuilder.App.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
-  <ScrollViewer>
-    <StackPanel Margin="24" Spacing="8" MaxWidth="900" HorizontalAlignment="Left">
+  <!-- Permissions and Diagnostics are sections here rather than sidebar entries. Both are
+       things you consult about the current configuration, not destinations, and as top-level
+       entries they made the sidebar ten items long with three of them settings-shaped. -->
+  <TabControl Margin="24">
 
-      <TextBlock Text="Settings" Classes="PageTitle" />
+    <TabItem Header="Settings">
+  <ScrollViewer>
+    <StackPanel Spacing="8" MaxWidth="900" HorizontalAlignment="Left" Margin="0,12,0,0">
 
       <TextBlock Text="{Binding StatusMessage}" Classes="Subtle"
                  IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
@@ -26,9 +31,6 @@
         <Button Content="Configure tenant"
                 Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
                 CommandParameter="setup" />
-        <Button Content="Permissions"
-                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
-                CommandParameter="permissions" />
       </StackPanel>
 
       <TextBlock Text="Sign-in storage" Classes="SectionTitle" />
@@ -113,4 +115,15 @@
               HorizontalAlignment="Left" Margin="0,8,0,0" />
     </StackPanel>
   </ScrollViewer>
+    </TabItem>
+
+    <TabItem Header="Permissions">
+      <views:PermissionsView DataContext="{Binding Permissions}" />
+    </TabItem>
+
+    <TabItem Header="Diagnostics">
+      <views:DiagnosticsView DataContext="{Binding Diagnostics}" />
+    </TabItem>
+
+  </TabControl>
 </UserControl>

@@ -56,7 +56,7 @@ tested. Request URLs are logged with sensitive query values removed. No log leve
 **Mitigation:** authentication and consent **always** open the system browser at an official
 `login.microsoftonline.com` URL. There is no embedded web view (ADR-0004), the application
 never renders a consent-like screen, and it never accepts credentials in any field.
-**Detection aid:** the Permissions page shows the exact client ID and tenant in use so a user
+**Detection aid:** the Permissions tab in Settings shows the exact client ID and tenant in use so a user
 can compare against what the browser displayed.
 
 ### T4 — Cross-tenant confusion

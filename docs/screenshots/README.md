@@ -9,7 +9,7 @@ principal names and sometimes sharing links.
 Capture against a **dedicated test tenant with synthetic content**, never a production tenant.
 Then check the image for:
 
-- Tenant name and tenant ID in the header or the Permissions page
+- Tenant name and tenant ID in the header or the Permissions tab in Settings
 - The signed-in account's user principal name
 - Real site, library, folder and file names
 - Sharing links in the results grid
