@@ -55,7 +55,7 @@ for Business.
 The permissions need administrator consent and you are not an administrator, or your tenant
 requires admin consent for all applications.
 
-**What to do.** On the Consent page or the Permissions page, use **Copy consent link** and send
+**What to do.** On the Consent page or the Permissions tab in Settings, use **Copy consent link** and send
 it to an authorized administrator. Save the configuration as pending approval, then use **Check
 again** once they confirm.
 
@@ -89,7 +89,7 @@ not satisfy a compliance requirement; your administrator can check the sign-in l
 This is the application being honest. The redirect looked successful, but the token Microsoft
 Entra actually issued did not contain every required scope.
 
-**What to do.** Check the Permissions page for exactly which scopes are missing. Common causes: an
+**What to do.** Check the Permissions tab in Settings for exactly which scopes are missing. Common causes: an
 administrator consented to a subset; a Conditional Access policy restricts the application; or
 consent was granted in a different tenant.
 
@@ -167,7 +167,7 @@ sharing policy for that site. This application cannot override policy and will n
 
 Either the required permission is missing, or your account cannot share those items.
 
-**What to do.** Check the Permissions page first. If `Files.ReadWrite.All` is granted, the issue
+**What to do.** Check the Permissions tab in Settings first. If `Files.ReadWrite.All` is granted, the issue
 is item-level: you may be able to read a library without being allowed to share from it.
 
 ### The job is very slow, and progress mentions throttling
@@ -245,7 +245,7 @@ anyway* if you trust the source.
 
 ## Getting more information
 
-1. **Diagnostics page** — run the connectivity test, review sanitized recent errors.
+1. **Diagnostics tab in Settings** — run the connectivity test, review sanitized recent errors.
 2. **Open log folder** — logs are redacted, so no token appears in them.
 3. **Export a diagnostic bundle** — the page lists exactly what it will include before writing.
 

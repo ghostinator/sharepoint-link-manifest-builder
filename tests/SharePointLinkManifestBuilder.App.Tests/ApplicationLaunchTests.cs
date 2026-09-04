@@ -120,13 +120,18 @@ public sealed class ApplicationLaunchTests : IDisposable
         window.Show();
 
         Assert.NotNull(window.DataContext);
-        Assert.Equal(10, viewModel.Pages.Count);
+        Assert.Equal(8, viewModel.Pages.Count);
         Assert.Contains(viewModel.Pages, p => p.NavigationKey == "setup");
 
         // The resource browsers are steps inside the job page, not destinations. Listing them
         // here again would restore the detour this navigation was changed to remove.
         Assert.DoesNotContain(viewModel.Pages, p => p.NavigationKey == "sharepoint");
         Assert.DoesNotContain(viewModel.Pages, p => p.NavigationKey == "onedrive");
+
+        // Permissions and Diagnostics are sections of Settings for the same reason: they are
+        // things you consult, not places you go.
+        Assert.DoesNotContain(viewModel.Pages, p => p.NavigationKey == "permissions");
+        Assert.DoesNotContain(viewModel.Pages, p => p.NavigationKey == "diagnostics");
         Assert.False(string.IsNullOrWhiteSpace(window.Title));
     }
 
@@ -166,7 +171,7 @@ public sealed class ApplicationLaunchTests : IDisposable
         foreach (var key in new[]
         {
             "home", "job", "profiles", "history",
-            "setup", "permissions", "settings", "diagnostics", "help", "about",
+            "setup", "settings", "help", "about",
         })
         {
             await viewModel.NavigateToAsync(key);

@@ -145,7 +145,7 @@ version is read by a newer one; see [ROLLBACK.md](ROLLBACK.md) for the reverse.
    *Remove tenant configuration* in the application does this cleanly.
 
 **Uninstalling never deletes the Microsoft Entra app registration.** Deleting a registration is
-a separate, explicitly confirmed action on the Permissions page, and only for a registration the
+a separate, explicitly confirmed action on the Permissions tab in Settings, and only for a registration the
 application created.
 
 ## What a publisher must supply

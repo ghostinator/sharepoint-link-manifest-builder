@@ -69,7 +69,7 @@ the following would never be eligible for transmission:
 
 ## Diagnostic bundles
 
-Built from an explicit allow-list, and the Diagnostics page shows you the categories before
+Built from an explicit allow-list, and the Diagnostics tab in Settings shows you the categories before
 anything is written.
 
 **Always included:** application version, platform, runtime; whether a tenant is configured;

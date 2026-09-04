@@ -331,9 +331,14 @@ public sealed partial class SettingsViewModel : PageViewModelBase
         ConnectionCoordinator connection,
         IDiagnosticsService diagnostics,
         ApplicationPaths paths,
-        FolderLauncher folders)
+        FolderLauncher folders,
+        PermissionsViewModel permissions,
+        DiagnosticsViewModel diagnosticsPage)
         : base("Settings", "settings")
     {
+        Permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
+        Diagnostics = diagnosticsPage ?? throw new ArgumentNullException(nameof(diagnosticsPage));
+
         _settingsStore = settingsStore ?? throw new ArgumentNullException(nameof(settingsStore));
         _tokenStorage = tokenStorage ?? throw new ArgumentNullException(nameof(tokenStorage));
         _connection = connection ?? throw new ArgumentNullException(nameof(connection));
@@ -341,6 +346,15 @@ public sealed partial class SettingsViewModel : PageViewModelBase
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _folders = folders ?? throw new ArgumentNullException(nameof(folders));
     }
+
+    /// <summary>
+    /// The permissions review, shown as a section of Settings rather than a sidebar entry of its
+    /// own. It is something you consult about the current configuration, not a place you go.
+    /// </summary>
+    public PermissionsViewModel Permissions { get; }
+
+    /// <summary>Diagnostics, shown as a section of Settings for the same reason.</summary>
+    public DiagnosticsViewModel Diagnostics { get; }
 
     /// <summary>Available log levels.</summary>
     public static IReadOnlyList<string> LogLevels { get; } =
@@ -392,6 +406,12 @@ public sealed partial class SettingsViewModel : PageViewModelBase
         LogLevel = settings.LogLevel;
 
         OnPropertyChanged(nameof(SecureStorageStatus));
+
+        // Permissions and Diagnostics used to load when navigated to. Hosting them as tabs means
+        // this is what replaces that, and both have to load regardless of which tab is showing:
+        // the tab strip does not tell the view model when a tab is selected.
+        await Permissions.OnNavigatedToAsync(cancellationToken).ConfigureAwait(true);
+        await Diagnostics.OnNavigatedToAsync(cancellationToken).ConfigureAwait(true);
         OnPropertyChanged(nameof(SecureStorageDetail));
     }
 
@@ -1036,17 +1056,9 @@ public sealed partial class AboutViewModel : PageViewModelBase
     /// Performs a manual update check. Nothing is downloaded or installed automatically; the
     /// user is only ever pointed at the publisher's release page.
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsUpdateCheckConfigured))]
     private async Task CheckForUpdatesAsync()
     {
-        if (Product.UpdateCheckUrl.Contains("PLACEHOLDER", StringComparison.OrdinalIgnoreCase))
-        {
-            UpdateCheckResult =
-                "No update endpoint is configured in this build, so there is nothing to check against.";
-
-            return;
-        }
-
         UpdateCheckResult = "Opening the releases page in your browser. "
             + "This application never downloads or installs an update by itself.";
 
@@ -1055,6 +1067,26 @@ public sealed partial class AboutViewModel : PageViewModelBase
             await _browser.OpenAsync(uri).ConfigureAwait(true);
         }
     }
+
+    /// <summary>
+    /// Whether this build has an update endpoint to check against.
+    /// <para>
+    /// This repository ships a placeholder, so the answer is normally no. The control is
+    /// disabled rather than offered and then apologised to: a button that can only ever report
+    /// its own uselessness is worse than one that is visibly unavailable with the reason beside
+    /// it.
+    /// </para>
+    /// </summary>
+    public bool IsUpdateCheckConfigured =>
+        !Product.UpdateCheckUrl.Contains("PLACEHOLDER", StringComparison.OrdinalIgnoreCase)
+        && Uri.TryCreate(Product.UpdateCheckUrl, UriKind.Absolute, out _);
+
+    /// <summary>Why the update check is unavailable, or empty when it is available.</summary>
+    public string UpdateCheckUnavailableReason =>
+        IsUpdateCheckConfigured
+            ? string.Empty
+            : "This build has no update endpoint configured, so there is nothing to check "
+              + "against. A published build points this at its releases page.";
 
     /// <summary>Opens a metadata URL in the system browser.</summary>
     [RelayCommand]

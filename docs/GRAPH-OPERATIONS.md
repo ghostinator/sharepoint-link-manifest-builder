@@ -14,7 +14,7 @@ requests. "Modifies?" means the call changes tenant configuration or content.
 | # | Purpose | Method + endpoint | Permission | Modifies? |
 |---|---|---|---|---|
 | 1.1 | Signed-in user and tenant for the header/Home page | `GET /me?$select=id,displayName,userPrincipalName` | `User.Read` | No |
-| 1.2 | Tenant display name for manifests and the Permissions page | `GET /organization?$select=id,displayName,verifiedDomains` | `User.Read` | No |
+| 1.2 | Tenant display name for manifests and the Permissions tab in Settings | `GET /organization?$select=id,displayName,verifiedDomains` | `User.Read` | No |
 
 **Pagination:** none. **Errors:** `401` -> reauthenticate; `403` -> scope missing.
 `GET /organization` may be denied in restricted tenants; the app degrades to the tenant GUID

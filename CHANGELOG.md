@@ -73,6 +73,13 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Loading a profile or a past run now arrives at the job page.** Both buttons name New Link Job
   as their destination, loaded the shared draft, and then stayed where they were, leaving the
   user to work out that anything had happened.
+- **Permissions and Diagnostics are sections of Settings.** Both are things you consult about the
+  current configuration rather than places you go, and as top-level entries they made three of
+  the ten sidebar items settings-shaped. The sidebar is now eight.
+- **The update check is unavailable when no update endpoint is configured**, and says so, instead
+  of being offered and then reporting that there is nothing to check against. Home's "Check for
+  Updates" shortcut is gone: it navigated to About and checked nothing, which the real control on
+  About already does properly.
 
 ### Added
 

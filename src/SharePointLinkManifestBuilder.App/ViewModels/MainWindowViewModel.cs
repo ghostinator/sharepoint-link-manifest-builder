@@ -29,9 +29,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         SavedProfilesViewModel profiles,
         JobHistoryViewModel history,
         TenantSetupViewModel setup,
-        PermissionsViewModel permissions,
         SettingsViewModel settings,
-        DiagnosticsViewModel diagnostics,
         HelpViewModel help,
         AboutViewModel about,
         ConnectionCoordinator connection,
@@ -45,10 +43,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         // The two resource browsers are deliberately absent: they are steps inside the job page
         // now, not destinations of their own. Choosing what to process is part of building a
         // job, and having them in the sidebar made it a detour with no way back.
+        // Permissions and Diagnostics are sections of Settings, not destinations. Both are
+        // things you consult about the current configuration rather than places you go, and as
+        // top-level entries they made three of the ten sidebar items settings-shaped.
         Pages =
         [
             home, job, profiles, history,
-            setup, permissions, settings, diagnostics, help, about,
+            setup, settings, help, about,
         ];
 
         _currentPage = home;

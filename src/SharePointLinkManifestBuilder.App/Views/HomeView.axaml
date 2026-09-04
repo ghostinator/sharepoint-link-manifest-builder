@@ -40,9 +40,9 @@
             <Button Content="Configure Tenant"
                     Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
                     CommandParameter="setup" />
-            <Button Content="Permissions"
-                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
-                    CommandParameter="permissions" />
+            <Button Content="Review permissions" Margin="0,0,8,8"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+                CommandParameter="settings" />
             <Button Content="Add organization"
                     Command="{Binding AddOrganizationCommand}"
                     IsVisible="{Binding IsMultiOrganization}"
@@ -105,9 +105,6 @@
         <Button Content="Job History" Margin="0,0,8,8"
                 Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
                 CommandParameter="history" />
-        <Button Content="Check for Updates" Margin="0,0,8,8"
-                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
-                CommandParameter="about" />
       </WrapPanel>
 
       <TextBlock Text="Recent jobs" Classes="SectionTitle" />

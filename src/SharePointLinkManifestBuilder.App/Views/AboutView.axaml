@@ -49,10 +49,14 @@
 
       <TextBlock Text="Updates" Classes="SectionTitle" />
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Content="Check for updates" Command="{Binding CheckForUpdatesCommand}" />
+        <Button Content="Check for updates" Command="{Binding CheckForUpdatesCommand}"
+                AutomationProperties.Name="Check for updates" />
         <TextBlock Text="{Binding UpdateCheckResult}" VerticalAlignment="Center" TextWrapping="Wrap"
                    MaxWidth="520" AutomationProperties.LiveSetting="Polite" />
       </StackPanel>
+
+      <TextBlock Text="{Binding UpdateCheckUnavailableReason}" Classes="Subtle" TextWrapping="Wrap"
+                 MaxWidth="620" IsVisible="{Binding !IsUpdateCheckConfigured}" />
       <TextBlock Classes="Subtle" FontSize="11"
                  Text="This application never downloads or installs an update by itself." />
 

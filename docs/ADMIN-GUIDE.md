@@ -128,7 +128,7 @@ normal sharing activity attributed to the signed-in user. Search for `SharingSet
 operations. Every Graph request carries a client request identifier that appears in Microsoft 365
 audit and support tooling.
 
-**On the user's machine.** The Permissions page shows a local audit history of every change the
+**On the user's machine.** The Permissions tab in Settings shows a local audit history of every change the
 application made to your tenant: registration creation, repair, consent requests and deletion,
 each with what changed and whether it succeeded. This is a convenience for the user; your tenant
 audit log remains authoritative.
