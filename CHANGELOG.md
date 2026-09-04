@@ -70,6 +70,16 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Loading a profile or a past run now arrives at the job page.** Both buttons name New Link Job
+  as their destination, loaded the shared draft, and then stayed where they were, leaving the
+  user to work out that anything had happened.
+
+### Added
+
+- **A job can be saved as a profile from the job page.** Saving previously existed only on the
+  Saved Profiles page; since it saves the shared draft, the sequence was build the job, navigate
+  away, name it, save, navigate back.
+
 - **Opening a OneDrive now collapses the others and expands the new one.** Each drive is a full
   folder tree, so several expanded at once buried the drive that had just been asked for beneath
   however much of the previous ones happened to be showing. Collapsing discards nothing: loaded

@@ -31,6 +31,13 @@
       <TextBlock Text="{Binding StepPosition}" VerticalAlignment="Center" Classes="Subtle" />
       <Button Content="Next &#x203A;" Command="{Binding NextStepCommand}"
               AutomationProperties.Name="Go to the next step" />
+
+      <!-- Saving lives here because this is where the thing being saved is built. It used to
+           exist only on the Saved Profiles page, which meant leaving the job to save it. -->
+      <TextBox Text="{Binding ProfileName}" Width="160" PlaceholderText="Profile name"
+               AutomationProperties.Name="Name to save this configuration under" />
+      <Button Content="Save as profile" Command="{Binding SaveAsProfileCommand}"
+              AutomationProperties.Name="Save this configuration as a reusable profile" />
     </StackPanel>
 
     <TabControl Grid.Row="2" SelectedIndex="{Binding SelectedTabIndex}" Margin="0,4,0,0">
