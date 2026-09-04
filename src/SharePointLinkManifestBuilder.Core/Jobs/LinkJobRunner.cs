@@ -436,7 +436,10 @@ public sealed class LinkJobRunner : ILinkJobRunner
         CancellationToken cancellationToken)
     {
         var results = new List<LinkResult>(candidates.Count);
-        var gate = new SemaphoreSlim(configuration.Execution.MaxConcurrency);
+        // Disposed rather than left to the finalizer: one is created per job run, and every
+        // task that takes it is awaited by the Task.WhenAll below, so the using scope cannot
+        // close while anything still holds it.
+        using var gate = new SemaphoreSlim(configuration.Execution.MaxConcurrency);
         var resultsLock = new Lock();
         var stopRequested = false;
 

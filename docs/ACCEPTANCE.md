@@ -2,22 +2,27 @@
 
 Each criterion from the product brief, with its status and where it is satisfied.
 
-**Legend.** ✅ done and verified locally · ⚠️ implemented but requires an external input or a live
-tenant to verify · ❌ not done
+**Legend.** ✅ done and verified · ⚠️ implemented but requires an external input to verify ·
+❌ not done
+
+The core flow was exercised against a real Microsoft 365 tenant on macOS in September 2026:
+creating the app registration, signing in, granting consent, browsing SharePoint and OneDrive,
+creating sharing links, and writing manifests back. Rows still marked ⚠️ are the ones that
+remain genuinely unverified, not the ones that were merely untested at the time of writing.
 
 | # | Criterion | Status | Where |
 |---|---|---|---|
 | 1 | The application builds | ✅ | `dotnet build`, 0 warnings, 0 errors |
-| 2 | Automated tests pass | ✅ | 383 tests, all passing |
+| 2 | Automated tests pass | ✅ | 478 tests, all passing |
 | 3 | The application launches | ✅ | `ApplicationLaunchTests`, headless Avalonia |
 | 4 | First-run setup wizard exists | ✅ | `TenantSetupViewModel`, `TenantSetupView`, 8 pages |
 | 5 | Automatic and existing-registration paths exist | ✅ | `SetupMethod`; existing path fully functional |
-| 6 | Automatic registration works given a bootstrap identity | ⚠️ | `AppRegistrationService` implemented and unit-tested; needs a bootstrap client ID and a live tenant |
+| 6 | Automatic registration works given a bootstrap identity | ✅ | Verified against a live tenant: `POST /applications` returned 201 and the wizard signed in to the new registration. Still needs a bootstrap client ID, which this repository does not ship |
 | 7 | No client secret in the desktop app | ✅ | ADR-0004; asserted by `CreateRegistration_NeverRequestsAPasswordCredential` |
 | 8 | Microsoft-hosted administrator consent | ✅ | `ConsentService` builds official URLs only; system browser |
 | 9 | Consent verified, not assumed | ✅ | ADR-0006; `VerifyConsentAsync` acquires a real token |
 | 10 | Pending administrator approval supported | ✅ | `ConsentState.PendingAdministratorApproval`, Copy consent link, Check again |
-| 11 | User can sign in with Microsoft identity | ⚠️ | `MsalAuthenticationService`; interactive flow needs a live tenant |
+| 11 | User can sign in with Microsoft identity | ✅ | Verified against a live tenant on macOS, including the interactive browser flow |
 | 12 | User can switch tenant and account | ✅ | `ConnectionCoordinator`, Settings, Permissions |
 | 13 | Graphical SharePoint selector | ✅ | `SharePointBrowserView` |
 | 14 | Selecting a site loads its libraries | ✅ | `LoadSiteDrivesAsync`; `GetSiteDrives_ReturnsEveryLibrary` |
@@ -50,8 +55,8 @@ tenant to verify · ❌ not done
 | 41 | GitHub-ready workflows | ✅ | 5 workflows, actions pinned to verified SHAs |
 | 42 | Publication safety scan exists | ✅ | `scripts/scan-secrets.sh`; verified against planted secrets |
 | 43 | CI uses no live-tenant credentials | ✅ | No secret referenced in any workflow |
-| 43a | CodeQL | ⚠️ | Configured and verified to analyse all 110 C# files; result upload needs GitHub Advanced Security, so the job is gated on the repository being public |
-| 44 | Cross-platform packages configured | ⚠️ | Scripts and workflow for 6 RIDs; only `osx-arm64` built on this machine |
+| 43a | CodeQL | ✅ | Running on the public repository; first analysis uploaded 61 alerts, all `note` or `warning` code-quality queries with no security severity. The job is gated on the repository being public |
+| 44 | Cross-platform packages configured | ✅ | All 6 RIDs build in CI; only `osx-arm64` packaged and run on a real machine |
 | 45 | Rollback documented | ✅ | `docs/ROLLBACK.md` |
 | 46 | Another organization can follow the documentation | ✅ | `docs/ENTRA-SETUP.md`, `docs/ADMIN-GUIDE.md`; no tenant-specific values |
 | 47 | No private SharePoint data in the repository | ✅ | Safety scan passes |
