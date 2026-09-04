@@ -27,7 +27,14 @@ public static class ServiceRegistration
 
     /// <summary>Builds the application's service provider.</summary>
     /// <param name="paths">Local state locations; tests override this to a temporary directory.</param>
-    public static ServiceProvider Build(ApplicationPaths? paths = null)
+    /// <param name="configure">
+    /// Runs after every registration and before the provider is built, so a test can substitute
+    /// a service. Nothing in the application passes this; it exists so behaviour that depends on
+    /// Microsoft Entra can be exercised without one.
+    /// </param>
+    public static ServiceProvider Build(
+        ApplicationPaths? paths = null,
+        Action<IServiceCollection>? configure = null)
     {
         var services = new ServiceCollection();
         var applicationPaths = paths ?? new ApplicationPaths();
@@ -42,6 +49,8 @@ public static class ServiceRegistration
         AddCoreServices(services);
         AddGraphServices(services, configuration);
         AddViewModels(services);
+
+        configure?.Invoke(services);
 
         return services.BuildServiceProvider(new ServiceProviderOptions
         {

@@ -198,6 +198,19 @@ public sealed class FakeAuthenticationService : IAuthenticationService
     /// <summary>When false, token acquisition fails, simulating a signed-out state.</summary>
     public bool IsSignedIn { get; set; } = true;
 
+    /// <summary>
+    /// When set, a silent acquisition fails with this error and an interactive one succeeds.
+    /// Models the real AADSTS65001 case: the tenant is consented, but this user has no cached
+    /// grant, so only an interactive request can produce a token.
+    /// </summary>
+    public GraphErrorKind? SilentOnlyFailure { get; set; }
+
+    /// <summary>How many times a token was requested silently.</summary>
+    public int SilentAttempts { get; private set; }
+
+    /// <summary>How many times a token was requested interactively.</summary>
+    public int InteractiveAttempts { get; private set; }
+
     /// <summary>Scopes the fake reports as granted.</summary>
     public IReadOnlyList<string> GrantedScopes { get; set; } =
         ["User.Read", "Sites.Read.All", "Files.ReadWrite.All"];
@@ -234,12 +247,72 @@ public sealed class FakeAuthenticationService : IAuthenticationService
         });
     }
 
+    /// <summary>Accounts the fake reports as cached, for account-switcher tests.</summary>
+    public List<UserAccount> CachedAccounts { get; } = [];
+
+    /// <summary>The home account ID passed to the last switch, for assertions.</summary>
+    public string? LastSwitchedTo { get; private set; }
+
+    /// <inheritdoc />
+    public Task<AuthenticationResultInfo> SwitchToAccountAsync(
+        string homeAccountId,
+        IEnumerable<string> scopes,
+        CancellationToken cancellationToken = default)
+    {
+        LastSwitchedTo = homeAccountId;
+
+        var match = CachedAccounts.FirstOrDefault(a =>
+            string.Equals(a.HomeAccountId, homeAccountId, StringComparison.Ordinal));
+
+        if (match is null)
+        {
+            return Task.FromResult(new AuthenticationResultInfo
+            {
+                Succeeded = false,
+                Error = new GraphError
+                {
+                    Kind = GraphErrorKind.AuthenticationFailed,
+                    Message = "That account is no longer cached on this device.",
+                },
+            });
+        }
+
+        CurrentAccount = match;
+        AccountChanged?.Invoke(this, match);
+
+        return Task.FromResult(new AuthenticationResultInfo
+        {
+            Succeeded = true,
+            Account = match,
+            GrantedScopes = GrantedScopes,
+        });
+    }
+
     /// <inheritdoc />
     public Task<AuthenticationResultInfo> AcquireTokenAsync(
         IEnumerable<string> scopes,
         bool allowInteractive = false,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(new AuthenticationResultInfo
+        CancellationToken cancellationToken = default)
+    {
+        if (allowInteractive)
+        {
+            InteractiveAttempts++;
+        }
+        else
+        {
+            SilentAttempts++;
+        }
+
+        if (SilentOnlyFailure is { } kind && !allowInteractive)
+        {
+            return Task.FromResult(new AuthenticationResultInfo
+            {
+                Succeeded = false,
+                Error = new GraphError { Kind = kind, Message = "Interaction required." },
+            });
+        }
+
+        return Task.FromResult(new AuthenticationResultInfo
         {
             Succeeded = IsSignedIn,
             Account = CurrentAccount,
@@ -248,6 +321,7 @@ public sealed class FakeAuthenticationService : IAuthenticationService
                 ? null
                 : new GraphError { Kind = GraphErrorKind.AuthenticationFailed, Message = "Not signed in." },
         });
+    }
 
     /// <inheritdoc />
     public Task<string?> GetAccessTokenAsync(

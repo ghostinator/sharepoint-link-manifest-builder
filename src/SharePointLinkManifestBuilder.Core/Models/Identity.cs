@@ -79,13 +79,45 @@ public sealed record UserAccount
 }
 
 /// <summary>
+/// Which Microsoft Entra organizations an application registration will accept sign-ins from.
+/// </summary>
+public enum TenantAudience
+{
+    /// <summary>
+    /// One named organization. The authority is tenant-specific, so a token issued by any
+    /// other tenant is structurally impossible.
+    /// </summary>
+    SingleTenant = 0,
+
+    /// <summary>
+    /// Any work or school organization, using the <c>/organizations</c> authority.
+    /// <para>
+    /// Deliberately <em>not</em> <c>/common</c>. <c>/common</c> additionally accepts personal
+    /// Microsoft accounts, which have no Entra tenant and no SharePoint or OneDrive for
+    /// Business, so they can only ever fail later and more confusingly. The tenant a token was
+    /// issued by is resolved at sign-in and pinned for the session; see
+    /// docs/adr/0011-multi-tenant-authority.md.
+    /// </para>
+    /// </summary>
+    AnyOrganization = 1,
+}
+
+/// <summary>
 /// Non-secret configuration identifying the tenant and the application registration this
 /// installation uses. Persisted locally. Never contains a secret, token, or certificate.
 /// </summary>
 public sealed record TenantConfiguration
 {
-    /// <summary>Entra tenant (directory) ID. All authority URLs are tenant-specific.</summary>
-    public required string TenantId { get; init; }
+    /// <summary>
+    /// Entra tenant (directory) ID of the organization the application registration lives in.
+    /// Required for <see cref="TenantAudience.SingleTenant"/>, where it also fixes the
+    /// authority. Optional for <see cref="TenantAudience.AnyOrganization"/>, where it is only
+    /// used to build administrator-consent URLs for the registration's home tenant.
+    /// </summary>
+    public string TenantId { get; init; } = string.Empty;
+
+    /// <summary>Which organizations this registration accepts sign-ins from.</summary>
+    public TenantAudience Audience { get; init; } = TenantAudience.SingleTenant;
 
     /// <summary>Tenant display name for the UI and manifest headers, when readable.</summary>
     public string? TenantDisplayName { get; init; }
@@ -129,16 +161,29 @@ public sealed record TenantConfiguration
     /// <summary>When consent and connectivity were last verified.</summary>
     public DateTimeOffset? LastVerifiedUtc { get; init; }
 
-    /// <summary>The tenant-specific authority URL. Never <c>/common</c>, to prevent tenant confusion.</summary>
-    public string Authority => $"{Instance.TrimEnd('/')}/{TenantId}";
+    /// <summary>
+    /// The authority URL. Tenant-specific for a single-tenant registration; the
+    /// <c>/organizations</c> authority for a multi-tenant one. Never <c>/common</c>, which
+    /// would additionally admit personal Microsoft accounts.
+    /// </summary>
+    public string Authority => Audience == TenantAudience.AnyOrganization
+        ? $"{Instance.TrimEnd('/')}/{AuthorityDefaults.OrganizationsSegment}"
+        : $"{Instance.TrimEnd('/')}/{TenantId}";
+
+    /// <summary>True when sign-in may come from an organization other than <see cref="TenantId"/>.</summary>
+    public bool IsMultiTenant => Audience == TenantAudience.AnyOrganization;
 
     /// <summary>Required scopes that were not present in the last verified token.</summary>
     public IReadOnlyList<string> MissingScopes =>
         RequiredScopes.Where(s => !GrantedScopes.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
 
-    /// <summary>True when a client ID and tenant ID are present and syntactically valid.</summary>
-    public bool IsUsable =>
-        Guid.TryParse(TenantId, out _) && Guid.TryParse(ClientId, out _);
+    /// <summary>
+    /// True when this configuration has everything sign-in needs. A multi-tenant registration
+    /// needs only a client ID: the tenant is whichever organization the user signs in to, and
+    /// requiring one up front would defeat the point.
+    /// </summary>
+    public bool IsUsable => Guid.TryParse(ClientId, out _)
+        && (IsMultiTenant || Guid.TryParse(TenantId, out _));
 }
 
 /// <summary>Default endpoints for the Microsoft public cloud. Sovereign clouds override these.</summary>
@@ -155,6 +200,18 @@ public static class AuthorityDefaults
 
     /// <summary>The loopback redirect URI registered for the public client.</summary>
     public const string LoopbackRedirectUri = "http://localhost";
+
+    /// <summary>
+    /// Authority segment accepting any work or school organization. Chosen over
+    /// <c>common</c>, which also admits personal Microsoft accounts.
+    /// </summary>
+    public const string OrganizationsSegment = "organizations";
+
+    /// <summary>Entra value for a registration scoped to one organization.</summary>
+    public const string SignInAudienceSingleTenant = "AzureADMyOrg";
+
+    /// <summary>Entra value for a registration accepting any work or school organization.</summary>
+    public const string SignInAudienceMultiTenant = "AzureADMultipleOrgs";
 }
 
 /// <summary>
@@ -192,8 +249,16 @@ public sealed record AppRegistrationConfiguration
     /// <summary>Display name proposed for the registration. User-editable.</summary>
     public required string DisplayName { get; init; }
 
-    /// <summary>Supported account types. Always single-tenant for the created registration.</summary>
-    public string SignInAudience { get; init; } = "AzureADMyOrg";
+    /// <summary>
+    /// Which organizations the created registration will accept sign-ins from. Defaults to the
+    /// narrower single-tenant choice; the user opts in to multi-tenant explicitly.
+    /// </summary>
+    public TenantAudience Audience { get; init; } = TenantAudience.SingleTenant;
+
+    /// <summary>Supported account types, in the value Microsoft Entra expects.</summary>
+    public string SignInAudience => Audience == TenantAudience.AnyOrganization
+        ? AuthorityDefaults.SignInAudienceMultiTenant
+        : AuthorityDefaults.SignInAudienceSingleTenant;
 
     /// <summary>Marks the app as a public client, so no secret is ever required.</summary>
     public bool IsFallbackPublicClient { get; init; } = true;
@@ -210,7 +275,11 @@ public sealed record AppRegistrationConfiguration
     public IReadOnlyList<string> DescribePlannedChanges() =>
     [
         $"Create an application registration named \"{DisplayName}\".",
-        $"Set supported account types to {SignInAudience} (this tenant only).",
+        $"Set supported account types to {SignInAudience} ("
+            + (Audience == TenantAudience.AnyOrganization
+                ? "any work or school organization; each organization must still consent separately"
+                : "this organization only")
+            + ").",
         "Enable public client behaviour (no client secret will be created).",
         $"Register redirect URI(s): {string.Join(", ", RedirectUris)}.",
         $"Request {RequestedPermissions.Count} delegated Microsoft Graph permission(s): "

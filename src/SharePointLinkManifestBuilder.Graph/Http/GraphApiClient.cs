@@ -37,6 +37,17 @@ public sealed class GraphApiClient : IGraphApiClient
     internal static readonly JsonSerializerOptions SerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true,
+
+        // Microsoft Graph names every property in camelCase, and this policy is what makes the
+        // DTOs serialize that way. Without it every request body went out in PascalCase.
+        // Reading was unaffected -- PropertyNameCaseInsensitive covers that -- and Graph is
+        // lenient enough about scalar properties that most writes were accepted anyway, so the
+        // mismatch survived a long time. It is not lenient about complex ones: a registration
+        // POST carrying "PublicClient" was rejected outright with
+        // "Invalid property 'PublicClient'". Properties that are not simply camelCase, such as
+        // "@microsoft.graph.conflictBehavior", carry [JsonPropertyName] and override this.
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
@@ -382,10 +393,16 @@ public sealed class GraphApiClient : IGraphApiClient
                     var error = GraphErrorMapper.Map(
                         status, code, message, operation, correlationId, serviceRequestId);
 
+                    // The message is logged as well as the code. For a schema rejection --
+                    // Request_BadRequest above all -- the code says only "something in the body
+                    // was wrong" and the message is the sole statement of *what*. It is Entra's
+                    // description of the request this application constructed, not user content,
+                    // but it is redacted anyway so a value echoed back cannot leak through.
                     _logger.LogWarning(
                         "Graph request failed: {Operation} returned HTTP {Status} ({GraphCode}). "
-                        + "Correlation {CorrelationId}, service request {ServiceRequestId}.",
-                        operation, status, code ?? "none", correlationId, serviceRequestId ?? "none");
+                        + "Correlation {CorrelationId}, service request {ServiceRequestId}. Detail: {Detail}",
+                        operation, status, code ?? "none", correlationId, serviceRequestId ?? "none",
+                        SensitiveDataRedactor.Redact(message ?? "none"));
 
                     return Failure<T>(error, correlationId);
                 }

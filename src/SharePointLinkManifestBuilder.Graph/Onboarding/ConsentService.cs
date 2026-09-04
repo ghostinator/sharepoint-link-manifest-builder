@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using SharePointLinkManifestBuilder.Core.Abstractions;
 using SharePointLinkManifestBuilder.Core.Models;
+using SharePointLinkManifestBuilder.Core.Security;
 
 namespace SharePointLinkManifestBuilder.Graph.Onboarding;
 
@@ -38,21 +39,59 @@ public sealed class ConsentService : IConsentService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <summary>
+    /// Determines which directory consent must be requested in.
+    /// <para>
+    /// A single-tenant configuration always names its own tenant. A multi-tenant one has no
+    /// statically configured tenant, so the directory to consent in is the one the user is
+    /// currently signed in to. Returns null when that cannot be determined, which callers must
+    /// treat as "sign in first" rather than falling back to <c>/organizations</c>: an explicit
+    /// tenant in the consent URL is precisely what stops an administrator who is signed into
+    /// several directories from consenting in the wrong one.
+    /// </para>
+    /// </summary>
+    internal static string? ResolveConsentTenantId(
+        TenantConfiguration tenantConfiguration,
+        string? explicitTenantId,
+        UserAccount? signedInAccount)
+    {
+        if (!string.IsNullOrWhiteSpace(explicitTenantId))
+        {
+            return explicitTenantId.Trim();
+        }
+
+        if (!tenantConfiguration.IsMultiTenant)
+        {
+            return string.IsNullOrWhiteSpace(tenantConfiguration.TenantId)
+                ? null
+                : tenantConfiguration.TenantId;
+        }
+
+        return string.IsNullOrWhiteSpace(signedInAccount?.TenantId) ? null : signedInAccount.TenantId;
+    }
+
     /// <inheritdoc />
     public Uri BuildAdminConsentUrl(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> permissions,
         string redirectUri,
-        string state)
+        string state,
+        string? targetTenantId = null)
     {
         ArgumentNullException.ThrowIfNull(tenantConfiguration);
         ArgumentNullException.ThrowIfNull(permissions);
         ArgumentException.ThrowIfNullOrWhiteSpace(redirectUri);
         ArgumentException.ThrowIfNullOrWhiteSpace(state);
 
-        // The tenant-specific /v2.0/adminconsent endpoint. Using the tenant ID rather than
-        // /common or /organizations is what keeps an administrator from accidentally consenting
-        // in a different directory than the one being configured.
+        var tenantId = ResolveConsentTenantId(
+            tenantConfiguration, targetTenantId, _authentication.CurrentAccount)
+            ?? throw new InvalidOperationException(
+                "The directory to request consent in could not be determined. Sign in first so the "
+                + "consent request names an explicit organization.");
+
+        // The tenant-specific /v2.0/adminconsent endpoint. Naming the tenant explicitly rather
+        // than using /common or /organizations is what keeps an administrator from accidentally
+        // consenting in a different directory than the one being configured.
         var scope = GraphScopes.ToQualifiedScopeParameter(permissions, tenantConfiguration.GraphEndpoint);
 
         var query = string.Join('&',
@@ -64,26 +103,46 @@ public sealed class ConsentService : IConsentService
         ]);
 
         var instance = tenantConfiguration.Instance.TrimEnd('/');
-        return new Uri($"{instance}/{tenantConfiguration.TenantId}/v2.0/adminconsent?{query}");
+        return new Uri($"{instance}/{tenantId}/v2.0/adminconsent?{query}");
     }
 
     /// <inheritdoc />
     public async Task<ConsentOutcome> RequestAdminConsentAsync(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> permissions,
+        string? targetTenantId = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tenantConfiguration);
         ArgumentNullException.ThrowIfNull(permissions);
 
+        var expectedTenantId = ResolveConsentTenantId(
+            tenantConfiguration, targetTenantId, _authentication.CurrentAccount);
+
+        if (expectedTenantId is null)
+        {
+            return new ConsentOutcome
+            {
+                Approved = false,
+                Error = new GraphError
+                {
+                    Kind = GraphErrorKind.TenantMismatch,
+                    Message = "The organization to request consent in is not known yet.",
+                    SuggestedAction = "Sign in first. Consent is always requested in one named "
+                        + "organization so it cannot be granted in the wrong directory.",
+                },
+            };
+        }
+
         var state = LoopbackRedirectListener.GenerateState();
 
         using var listener = new LoopbackRedirectListener(_logger);
-        var url = BuildAdminConsentUrl(tenantConfiguration, permissions, listener.RedirectUri, state);
+        var url = BuildAdminConsentUrl(
+            tenantConfiguration, permissions, listener.RedirectUri, state, expectedTenantId);
 
         _logger.LogInformation(
             "Opening Microsoft's administrator consent experience in the system browser for tenant {TenantId}.",
-            tenantConfiguration.TenantId);
+            expectedTenantId);
 
         await _browser.OpenAsync(url, cancellationToken).ConfigureAwait(false);
 
@@ -105,6 +164,9 @@ public sealed class ConsentService : IConsentService
 
         if (redirect.StateMismatch)
         {
+            _logger.LogWarning(
+                "The consent redirect did not carry the expected state value and was rejected.");
+
             return new ConsentOutcome
             {
                 Approved = false,
@@ -120,7 +182,7 @@ public sealed class ConsentService : IConsentService
         // Guard against an administrator consenting in the wrong directory, which is easy to do
         // when signed into several.
         if (!string.IsNullOrEmpty(redirect.TenantId)
-            && !string.Equals(redirect.TenantId, tenantConfiguration.TenantId, StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(redirect.TenantId, expectedTenantId, StringComparison.OrdinalIgnoreCase))
         {
             return new ConsentOutcome
             {
@@ -138,12 +200,24 @@ public sealed class ConsentService : IConsentService
 
         if (redirect.Error is not null)
         {
+            _logger.LogWarning(
+                "Administrator consent failed. Microsoft returned error {ConsentError}: {Detail}",
+                redirect.Error,
+                SensitiveDataRedactor.Redact(redirect.ErrorDescription ?? "no description"));
+
             return new ConsentOutcome
             {
                 Approved = false,
                 ReturnedTenantId = redirect.TenantId,
                 Error = MapConsentError(redirect.Error, redirect.ErrorDescription),
             };
+        }
+
+        if (!redirect.AdminConsentGranted)
+        {
+            _logger.LogWarning(
+                "The consent redirect returned without granting consent. This is what Microsoft "
+                + "sent back, and is usually an administrator declining or lacking the role.");
         }
 
         return new ConsentOutcome
@@ -154,9 +228,20 @@ public sealed class ConsentService : IConsentService
     }
 
     /// <inheritdoc />
+    /// <summary>
+    /// True when the failure means "this user has no cached grant", which an interactive sign-in
+    /// can resolve, rather than "consent was refused", which it cannot.
+    /// </summary>
+    private static bool NeedsInteraction(GraphError? error) =>
+        error?.Kind is GraphErrorKind.ConsentRequired
+            or GraphErrorKind.AdminConsentRequired
+            or GraphErrorKind.TokenExpired
+            or GraphErrorKind.ConditionalAccessInterrupted;
+
     public async Task<RegistrationVerification> VerifyConsentAsync(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> requiredPermissions,
+        bool allowInteractive = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tenantConfiguration);
@@ -172,9 +257,26 @@ public sealed class ConsentService : IConsentService
         // The heart of verification: attempt a real token acquisition and read back the scopes
         // Entra issued. This needs no directory permission and tests the thing that actually
         // matters, which is whether the application can obtain a usable token.
+        //
+        // Silent first, because when a grant is already cached this answers without disturbing
+        // the user. But silent-only was wrong: a consent that an administrator has genuinely
+        // granted is invisible to this process until some interactive sign-in records it for
+        // this user, so AADSTS65001 came back and was reported as "not consented" no matter how
+        // many times the user pressed Check again. Asking silently and concluding from silence
+        // conflates "nobody has consented" with "this user has no cached grant yet".
         var token = await _authentication
             .AcquireTokenAsync(scopes, allowInteractive: false, cancellationToken)
             .ConfigureAwait(false);
+
+        if (!token.Succeeded && allowInteractive && NeedsInteraction(token.Error))
+        {
+            _logger.LogInformation(
+                "Silent verification needs interaction; retrying with an interactive sign-in.");
+
+            token = await _authentication
+                .AcquireTokenAsync(scopes, allowInteractive: true, cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         if (!token.Succeeded)
         {
@@ -285,6 +387,24 @@ public sealed class ConsentService : IConsentService
             SuggestedAction = "An authorized Microsoft Entra administrator must approve the request. "
                 + "Use 'Copy Consent Link' to send it to one.",
         },
+
+        // Conditional Access demanded a managed or compliant device and the browser could not
+        // prove one. It arrives as interaction_required, so it has to be matched ahead of the
+        // generic arm below or it reads as "an administrator still needs to approve this", which
+        // sends the user to do something that cannot work from this device.
+        _ when description?.Contains("AADSTS50097", StringComparison.OrdinalIgnoreCase) == true =>
+            new GraphError
+            {
+                Kind = GraphErrorKind.ConditionalAccessInterrupted,
+                Message = "Your organization's Conditional Access policy requires a managed or "
+                    + "compliant device before consent can be granted, and the browser could not "
+                    + "prove this device qualifies.",
+                GraphErrorCode = "AADSTS50097",
+                SuggestedAction = "Grant consent from a device your organization manages, or have an "
+                    + "administrator grant it in the Microsoft Entra admin center under Enterprise "
+                    + "applications. If a token has already been issued with every permission this "
+                    + "application needs, no further consent is required at all.",
+            },
 
         "consent_required" or "interaction_required" => new GraphError
         {

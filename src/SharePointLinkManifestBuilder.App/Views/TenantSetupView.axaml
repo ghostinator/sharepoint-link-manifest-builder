@@ -67,13 +67,20 @@
 
           <Border Classes="Card">
             <StackPanel Spacing="6">
+              <!-- Always selectable. The bootstrap client ID this method needs is supplied by
+                   the Advanced field further along the automatic path, so disabling the method
+                   when no bootstrap ID is configured made that field unreachable. The run
+                   itself is guarded in CreateRegistrationAsync. -->
               <RadioButton GroupName="method" Content="Automatic tenant setup"
-                           IsEnabled="{Binding IsAutomaticSetupAvailable}"
                            IsChecked="{Binding Method, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=Automatic}" />
               <TextBlock Classes="Body" Margin="26,0,0,0"
                          Text="This application creates an app registration in your Microsoft Entra tenant for you. It needs an authorized account and a publisher-supplied bootstrap identity." />
               <Border Classes="Warning" Margin="26,6,0,0" IsVisible="{Binding !IsAutomaticSetupAvailable}">
-                <TextBlock Text="{Binding AutomaticSetupUnavailableReason}" Classes="Body" />
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding AutomaticSetupUnavailableReason}" Classes="Body" />
+                  <TextBlock Classes="Body" TextWrapping="Wrap"
+                             Text="You can still choose this method and supply your own bootstrap client ID under 'Advanced' on the next page. The bootstrap registration must be a multitenant public client with the delegated permissions User.Read and AppRegistration.Create. See docs/ENTRA-SETUP.md section 6." />
+                </StackPanel>
               </Border>
             </StackPanel>
           </Border>
@@ -113,9 +120,16 @@
           <TextBlock Classes="Body"
                      Text="Sign-in opens in your normal web browser so multi-factor authentication and Conditional Access work exactly as your organization configured them. This application never sees your password." />
 
+          <CheckBox IsChecked="{Binding UseAnyOrganization}"
+                    Content="This registration works with any work or school organization"
+                    AutomationProperties.Name="Use any work or school organization" />
+          <TextBlock Classes="Subtle" TextWrapping="Wrap"
+                     Text="Turn this on to use one app registration across several organizations, for example as a consultant or managed service provider. The registration itself must be set to 'Accounts in any organizational directory' in Microsoft Entra. Each organization still consents separately; consent in one never grants access to another. Personal Microsoft accounts are not supported, because they have no SharePoint or OneDrive for Business." />
+
           <TextBlock Text="Directory (tenant) ID" Classes="SectionTitle" />
           <TextBox Text="{Binding TenantId}" PlaceholderText="00000000-0000-0000-0000-000000000000"
                    AutomationProperties.Name="Directory tenant ID" />
+          <TextBlock Classes="Subtle" TextWrapping="Wrap" Text="{Binding TenantIdHint}" />
 
           <StackPanel Spacing="4"
                       IsVisible="{Binding Method, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter=ExistingRegistration}">
@@ -132,11 +146,29 @@
               <TextBox Text="{Binding BootstrapClientIdOverride}"
                        PlaceholderText="Bootstrap client ID"
                        AutomationProperties.Name="Bootstrap client ID" />
+
+              <TextBlock Classes="Body" TextWrapping="Wrap" Margin="0,8,0,0"
+                         Text="The bootstrap registration needs the delegated permissions User.Read and AppRegistration.Create. AppRegistration.Create is the least-privileged permission Microsoft documents for creating an app registration." />
+              <CheckBox IsChecked="{Binding UseBroadBootstrapPermission}"
+                        AutomationProperties.Name="Use Application.ReadWrite.All instead of AppRegistration.Create"
+                        Content="My tenant's portal does not list AppRegistration.Create" />
+              <Border Classes="Warning" IsVisible="{Binding UseBroadBootstrapPermission}">
+                <TextBlock Classes="Body" TextWrapping="Wrap"
+                           Text="Application.ReadWrite.All will be requested instead. This is much broader: it can read, modify and delete every application registration in the directory, not just create one, and it always requires administrator consent. Prefer AppRegistration.Create wherever the portal offers it." />
+              </Border>
             </StackPanel>
           </Expander>
 
-          <Button Content="Sign in with Microsoft" Classes="Primary"
-                  Command="{Binding SignInCommand}" HorizontalAlignment="Left" />
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+            <Button Content="Sign in with Microsoft" Classes="Primary"
+                    Command="{Binding SignInCommand}" />
+            <Button Content="Cancel sign-in"
+                    Command="{Binding SignInCancelCommand}"
+                    IsVisible="{Binding IsBusy}"
+                    AutomationProperties.Name="Cancel the sign-in in progress" />
+          </StackPanel>
+          <TextBlock Classes="Subtle" TextWrapping="Wrap" IsVisible="{Binding IsBusy}"
+                     Text="Waiting for you to finish in the browser. If the browser shows an error instead of returning here, cancel and check the IDs above." />
 
           <Border Classes="Notice"
                   IsVisible="{Binding SignedInAccount, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -246,6 +278,10 @@
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Button Content="Continue to Microsoft admin consent" Classes="Primary"
                     Command="{Binding RequestConsentCommand}" />
+            <Button Content="Cancel"
+                    Command="{Binding RequestConsentCancelCommand}"
+                    IsVisible="{Binding IsBusy}"
+                    AutomationProperties.Name="Cancel the consent request in progress" />
             <Button Content="Copy consent link" Command="{Binding CopyConsentLinkCommand}" />
             <Button Content="Save as pending approval" Command="{Binding SaveAsPendingCommand}" />
           </StackPanel>
@@ -294,6 +330,20 @@
             </StackPanel>
           </Border>
 
+          <Border Classes="Success" IsVisible="{Binding VerificationPassed}">
+            <StackPanel Spacing="2">
+              <TextBlock Text="PASS" FontWeight="Bold" />
+              <TextBlock Text="{Binding VerificationVerdict}" Classes="Body" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="Danger" IsVisible="{Binding VerificationFailed}">
+            <StackPanel Spacing="2">
+              <TextBlock Text="FAIL" FontWeight="Bold" />
+              <TextBlock Text="{Binding VerificationVerdict}" Classes="Body" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
           <Border Classes="Warning" IsVisible="{Binding VerificationWarnings.Count}">
             <StackPanel Spacing="4">
               <TextBlock Text="Warnings" FontWeight="SemiBold" />
@@ -307,10 +357,14 @@
             </StackPanel>
           </Border>
 
-          <!-- Stated plainly rather than presented as a pass. -->
+          <!-- Stated plainly rather than presented as a pass, but also not as a failure: these
+               are things this application chose not to assert either way. -->
           <Border Classes="Notice" IsVisible="{Binding VerificationNotChecked.Count}">
             <StackPanel Spacing="4">
-              <TextBlock Text="Not checked" FontWeight="SemiBold" />
+              <TextBlock Text="Not independently checked (this is not a failure)"
+                         FontWeight="SemiBold" />
+              <TextBlock Classes="Body" TextWrapping="Wrap"
+                         Text="Confirming these would need directory permissions this application deliberately does not request. The PASS or FAIL above is the answer that matters: it comes from a real token." />
               <ItemsControl ItemsSource="{Binding VerificationNotChecked}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="x:String">

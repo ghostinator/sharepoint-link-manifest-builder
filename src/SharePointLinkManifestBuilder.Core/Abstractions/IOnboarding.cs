@@ -184,28 +184,51 @@ public interface IConsentService
     /// <param name="permissions">Permissions to request.</param>
     /// <param name="redirectUri">A registered redirect URI.</param>
     /// <param name="state">Random state, validated on return.</param>
+    /// <param name="targetTenantId">
+    /// The organization to request consent in. Optional: a single-organization configuration
+    /// uses its own tenant, and a multi-organization one uses the signed-in organization. The
+    /// URL always names one explicit organization, never <c>/organizations</c>.
+    /// </param>
     Uri BuildAdminConsentUrl(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> permissions,
         string redirectUri,
-        string state);
+        string state,
+        string? targetTenantId = null);
 
     /// <summary>
     /// Opens the official consent experience in the system browser and awaits the redirect,
     /// validating both state and the returned tenant.
     /// </summary>
+    /// <param name="tenantConfiguration">Tenant and client to request consent for.</param>
+    /// <param name="permissions">Permissions to request.</param>
+    /// <param name="targetTenantId">
+    /// The organization to request consent in. Optional; see <see cref="BuildAdminConsentUrl"/>.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     Task<ConsentOutcome> RequestAdminConsentAsync(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> permissions,
+        string? targetTenantId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Verifies consent by acquiring a real token and comparing the scopes Microsoft Entra
     /// actually issued against those required. See docs/adr/0006.
     /// </summary>
+    /// <param name="tenantConfiguration">The configuration to verify against.</param>
+    /// <param name="requiredPermissions">The permissions the application needs.</param>
+    /// <param name="allowInteractive">
+    /// When true, a silent attempt that fails only because this user has no cached grant is
+    /// retried interactively. Consent an administrator granted in the directory is invisible to
+    /// a silent request until an interactive sign-in records it for the user, so a silent-only
+    /// check reports a correctly consented tenant as unconsented.
+    /// </param>
+    /// <param name="cancellationToken">Cancels the verification.</param>
     Task<RegistrationVerification> VerifyConsentAsync(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> requiredPermissions,
+        bool allowInteractive = false,
         CancellationToken cancellationToken = default);
 }
 

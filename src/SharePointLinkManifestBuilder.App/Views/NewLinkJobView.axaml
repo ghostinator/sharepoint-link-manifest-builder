@@ -6,7 +6,7 @@
              x:Class="SharePointLinkManifestBuilder.App.Views.NewLinkJobView"
              x:DataType="vm:NewLinkJobViewModel">
 
-  <Grid RowDefinitions="Auto,*" Margin="24">
+  <Grid RowDefinitions="Auto,Auto,*" Margin="24">
 
     <StackPanel Grid.Row="0" Spacing="4">
       <TextBlock Text="New Link Job" Classes="PageTitle" />
@@ -23,7 +23,16 @@
                  AutomationProperties.LiveSetting="Polite" />
     </StackPanel>
 
-    <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" Margin="0,12,0,0">
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,12,0,0"
+                HorizontalAlignment="Right">
+      <Button Content="&#x2039; Back" Command="{Binding PreviousStepCommand}"
+              AutomationProperties.Name="Go to the previous step" />
+      <TextBlock Text="{Binding StepPosition}" VerticalAlignment="Center" Classes="Subtle" />
+      <Button Content="Next &#x203A;" Command="{Binding NextStepCommand}"
+              AutomationProperties.Name="Go to the next step" />
+    </StackPanel>
+
+    <TabControl Grid.Row="2" SelectedIndex="{Binding SelectedTabIndex}" Margin="0,4,0,0">
 
       <!-- ============================ TARGETS ============================ -->
       <TabItem Header="1. Targets">
@@ -131,7 +140,7 @@
 
             <TextBlock Text="Expiry and behaviour" Classes="SectionTitle" />
             <CheckBox Content="Request an expiry date" IsChecked="{Binding UseExpiration}" />
-            <CalendarDatePicker SelectedDate="{Binding ExpirationDate}"
+            <CalendarDatePicker SelectedDate="{Binding ExpirationDate, Converter={x:Static conv:DateTimeOffsetToDateTimeConverter.Instance}}"
                                 IsEnabled="{Binding UseExpiration}"
                                 AutomationProperties.Name="Link expiry date" />
             <TextBlock Classes="Subtle" FontSize="11"
@@ -214,9 +223,9 @@
 
             <TextBlock Text="Modified date" Classes="SectionTitle" />
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <CalendarDatePicker SelectedDate="{Binding ModifiedAfter}"
+              <CalendarDatePicker SelectedDate="{Binding ModifiedAfter, Converter={x:Static conv:DateTimeOffsetToDateTimeConverter.Instance}}"
                                   AutomationProperties.Name="Modified on or after" />
-              <CalendarDatePicker SelectedDate="{Binding ModifiedBefore}"
+              <CalendarDatePicker SelectedDate="{Binding ModifiedBefore, Converter={x:Static conv:DateTimeOffsetToDateTimeConverter.Instance}}"
                                   AutomationProperties.Name="Modified on or before" />
             </StackPanel>
 
@@ -270,47 +279,69 @@
             <StackPanel Orientation="Horizontal" Spacing="12">
               <CheckBox Content="Dry run: change nothing at all" IsChecked="{Binding DryRun}"
                         ToolTip.Tip="Enumerates, filters and validates without creating a link or writing a manifest." />
-              <Button Content="Build preview" Classes="Primary" Command="{Binding BuildPreviewCommand}" />
+              <Button Content="Build preview" Command="{Binding BuildPreviewCommand}" />
+              <Button Content="Start job" Classes="Primary"
+                      Command="{Binding StartCommand}" IsEnabled="{Binding CanStart}" />
               <ProgressBar IsIndeterminate="True" Width="120" IsVisible="{Binding IsBusy}"
                            AutomationProperties.Name="Building preview" />
             </StackPanel>
 
-            <ItemsControl ItemsSource="{Binding ValidationProblems}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="x:String">
-                  <TextBlock Text="{Binding}" Foreground="IndianRed" Classes="Body" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <!-- Says why Start is unavailable, or that a dry run will change nothing. Without
+                 this a disabled button states that something is wrong but never what. -->
+            <Border Classes="Notice" IsVisible="{Binding HasStartBlockedReason}">
+              <TextBlock Text="{Binding StartBlockedReason}" Classes="Body" TextWrapping="Wrap"
+                         AutomationProperties.LiveSetting="Polite" />
+            </Border>
+
+            <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding ValidationProblems}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <TextBlock Text="{Binding}" Foreground="IndianRed" Classes="Body"
+                               TextWrapping="Wrap" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
           </StackPanel>
 
           <ScrollViewer>
             <StackPanel Spacing="8" Margin="0,12,0,0">
 
               <Border Classes="Danger" IsVisible="{Binding PreflightBlockers.Count}">
-                <StackPanel Spacing="4">
-                  <TextBlock Text="Blocked: the job cannot run yet" FontWeight="SemiBold" />
-                  <ItemsControl ItemsSource="{Binding PreflightBlockers}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="x:String">
-                        <TextBlock Text="{Binding}" Classes="Body" />
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </StackPanel>
+                <Expander IsExpanded="True" AutomationProperties.Name="Blocked: the job cannot run yet">
+                  <Expander.Header>
+                    <TextBlock FontWeight="SemiBold"
+                               Text="{Binding PreflightBlockers.Count, StringFormat='Blocked: the job cannot run yet ({0})'}" />
+                  </Expander.Header>
+                  <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding PreflightBlockers}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                          <TextBlock Text="{Binding}" Classes="Body" TextWrapping="Wrap" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Expander>
               </Border>
 
               <Border Classes="Warning" IsVisible="{Binding PreflightWarnings.Count}">
-                <StackPanel Spacing="4">
-                  <TextBlock Text="Warnings" FontWeight="SemiBold" />
-                  <ItemsControl ItemsSource="{Binding PreflightWarnings}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="x:String">
-                        <TextBlock Text="{Binding}" Classes="Body" />
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </StackPanel>
+                <Expander IsExpanded="False" AutomationProperties.Name="Warnings">
+                  <Expander.Header>
+                    <TextBlock FontWeight="SemiBold"
+                               Text="{Binding PreflightWarnings.Count, StringFormat='Warnings ({0})'}" />
+                  </Expander.Header>
+                  <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding PreflightWarnings}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                          <TextBlock Text="{Binding}" Classes="Body" TextWrapping="Wrap" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Expander>
               </Border>
 
               <!-- Three separate lists, deliberately. Presenting an unknown as a checked box
@@ -385,12 +416,8 @@
                 </DataGrid.Columns>
               </DataGrid>
 
-              <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,8,0,0">
-                <Button Content="Start job" Classes="Primary"
-                        Command="{Binding StartCommand}" IsEnabled="{Binding CanStart}" />
-                <TextBlock VerticalAlignment="Center" Classes="Subtle"
-                           Text="Build a preview before the job can be started." />
-              </StackPanel>
+              <TextBlock Classes="Subtle" Margin="0,8,0,0" TextWrapping="Wrap"
+                         Text="Build the preview and start the job from step 5." />
             </StackPanel>
           </ScrollViewer>
         </DockPanel>
@@ -398,8 +425,9 @@
 
       <!-- ============================ RUN AND RESULTS ============================ -->
       <TabItem Header="6. Run and results">
-        <DockPanel Margin="0,12">
-          <StackPanel DockPanel.Dock="Top" Spacing="8">
+        <Grid RowDefinitions="Auto,*" Margin="0,12">
+          <ScrollViewer Grid.Row="0" MaxHeight="380" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="8">
 
             <Border Classes="Card">
               <StackPanel Spacing="6">
@@ -441,10 +469,18 @@
               </StackPanel>
             </Border>
 
-            <Border Classes="Card" IsVisible="{Binding ManifestResults.Count}">
+            <Expander IsVisible="{Binding ManifestResults.Count}" IsExpanded="False"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                      AutomationProperties.Name="Manifests written">
+              <Expander.Header>
+                <TextBlock Text="{Binding ManifestResults.Count, StringFormat='Manifests written ({0})'}"
+                           FontWeight="SemiBold" />
+              </Expander.Header>
+              <!-- Bounded on purpose: a job that writes a manifest per folder produces a list
+                   long enough to push the progress card and the results grid off the page. -->
               <StackPanel Spacing="6">
-                <TextBlock Text="Manifests written" Classes="SectionTitle" Margin="0" />
-                <ItemsControl ItemsSource="{Binding ManifestResults}">
+                <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                  <ItemsControl ItemsSource="{Binding ManifestResults}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="models:ManifestWriteResult">
                       <Grid ColumnDefinitions="*,Auto" Margin="0,2">
@@ -466,15 +502,17 @@
                       </Grid>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                  </ItemsControl>
+                </ScrollViewer>
                 <Button Content="Copy manifest locations" Command="{Binding CopyManifestLocationsCommand}"
                         HorizontalAlignment="Left" />
               </StackPanel>
-            </Border>
+            </Expander>
           </StackPanel>
+          </ScrollViewer>
 
-          <DataGrid ItemsSource="{Binding Results}" IsReadOnly="True"
-                    GridLinesVisibility="Horizontal" Margin="0,12,0,0"
+          <DataGrid Grid.Row="1" ItemsSource="{Binding Results}" IsReadOnly="True"
+                    GridLinesVisibility="Horizontal" Margin="0,12,0,0" MinHeight="200"
                     AutomationProperties.Name="Per-file results">
             <DataGrid.Columns>
               <DataGridTextColumn Header="File" Binding="{Binding File.Name}" Width="220" />
@@ -494,7 +532,7 @@
               <DataGridTextColumn Header="Detail" Binding="{Binding Error.Message}" Width="280" />
             </DataGrid.Columns>
           </DataGrid>
-        </DockPanel>
+        </Grid>
       </TabItem>
     </TabControl>
   </Grid>

@@ -117,6 +117,19 @@ public interface IAuthenticationService
     /// <summary>Accounts MSAL has cached, for the account switcher.</summary>
     Task<IReadOnlyList<UserAccount>> GetCachedAccountsAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Switches to an already-cached account, silently when its refresh token is still valid and
+    /// falling back to an interactive prompt when the target organization still needs consent.
+    /// This is what makes moving between organizations a single gesture.
+    /// </summary>
+    /// <param name="homeAccountId">MSAL home account identifier of the account to activate.</param>
+    /// <param name="scopes">Scopes to request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<AuthenticationResultInfo> SwitchToAccountAsync(
+        string homeAccountId,
+        IEnumerable<string> scopes,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Signs out and removes the account from the cache.</summary>
     Task SignOutAsync(CancellationToken cancellationToken = default);
 

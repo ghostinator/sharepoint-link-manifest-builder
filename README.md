@@ -268,5 +268,11 @@ and it fails closed.
 
 ## Licence
 
-Not yet chosen. See [LICENSE-SELECTION.md](LICENSE-SELECTION.md). Until a licence file exists,
-default copyright applies and no permission to use, copy, modify or distribute is granted.
+GNU General Public License, version 3 or later. The full text is in [LICENSE](LICENSE), and the
+reasoning is recorded in [LICENSE-SELECTION.md](LICENSE-SELECTION.md).
+
+This is a copyleft licence: you may use, study, modify and redistribute this software, and any
+distributed derivative must also be GPL-3.0-or-later and ship its source. Every third-party
+dependency is MIT, BSD-3-Clause or Apache-2.0, all of which are compatible with GPL-3.0 --
+Apache-2.0 is compatible with version 3 but not version 2, which is part of why version 3 was
+chosen. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

@@ -73,6 +73,24 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     private readonly ApplicationPaths _paths;
     private readonly ILogger<TenantSetupViewModel> _logger;
 
+    /// <summary>
+    /// How long to wait for a step that depends on the user returning from the system browser.
+    /// <para>
+    /// Both interactive sign-in and administrator consent finish only when Microsoft Entra
+    /// redirects back to the loopback listener. When Entra instead shows an error *in the
+    /// browser* — a wrong client ID being the common case — no redirect is ever sent, and
+    /// without a bound the wait never ends. It is generous on purpose: multi-factor prompts,
+    /// password changes and Conditional Access can all legitimately take minutes.
+    /// </para>
+    /// </summary>
+    private static readonly TimeSpan BrowserRoundTripTimeout = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// How many times to try signing in to a freshly created registration. With the backoff
+    /// below this spans roughly half a minute, which comfortably covers Entra replication.
+    /// </summary>
+    private const int NewRegistrationSignInAttempts = 5;
+
     /// <summary>The page currently shown.</summary>
     [ObservableProperty]
     private SetupWizardPage _currentPage = SetupWizardPage.Welcome;
@@ -89,6 +107,16 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     [ObservableProperty]
     private string _existingClientId = string.Empty;
 
+    /// <summary>
+    /// True when the registration accepts any work or school organization. This makes the
+    /// Directory (tenant) ID optional, because the organization is whichever one the user signs
+    /// in to rather than one fixed at setup time.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TenantIdIsRequired))]
+    [NotifyPropertyChangedFor(nameof(TenantIdHint))]
+    private bool _useAnyOrganization;
+
     /// <summary>Display name proposed for a registration this application creates.</summary>
     [ObservableProperty]
     private string _proposedApplicationName = "SharePoint Link Manifest Builder";
@@ -96,6 +124,20 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     /// <summary>Bootstrap client ID typed into the Advanced field.</summary>
     [ObservableProperty]
     private string _bootstrapClientIdOverride = string.Empty;
+
+    /// <summary>
+    /// Whether the bootstrap registration should request <c>Application.ReadWrite.All</c> instead
+    /// of <c>AppRegistration.Create</c>.
+    /// <para>
+    /// Off by default, and deliberately phrased as a downgrade rather than an option.
+    /// <c>AppRegistration.Create</c> is the least-privileged permission Microsoft documents for
+    /// <c>POST /applications</c> and is all this application needs, but it is new enough that
+    /// some tenants' portal permission picker does not list it. Where that happens the only
+    /// consentable alternative is far broader, so the user chooses it knowingly.
+    /// </para>
+    /// </summary>
+    [ObservableProperty]
+    private bool _useBroadBootstrapPermission;
 
     /// <summary>The account signed in during the wizard.</summary>
     [ObservableProperty]
@@ -115,6 +157,9 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
 
     /// <summary>The result of the last verification.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VerificationVerdict))]
+    [NotifyPropertyChangedFor(nameof(VerificationPassed))]
+    [NotifyPropertyChangedFor(nameof(VerificationFailed))]
     private RegistrationVerification? _verification;
 
     /// <summary>The consent URL, offered for copying when the user cannot consent themselves.</summary>
@@ -128,6 +173,18 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     /// <summary>The client ID of the registration in use once setup completes.</summary>
     [ObservableProperty]
     private string? _resultingClientId;
+
+    /// <summary>
+    /// True when the Directory (tenant) ID must be supplied. A multi-organization registration
+    /// does not need one up front: the organization is resolved from the token at sign-in.
+    /// </summary>
+    public bool TenantIdIsRequired => !UseAnyOrganization;
+
+    /// <summary>Guidance shown beside the Directory (tenant) ID field.</summary>
+    public string TenantIdHint => UseAnyOrganization
+        ? "Optional. Leave this blank and the organization will be taken from the account you "
+          + "sign in with. Supply one only to pre-select a specific organization."
+        : "Required. The Directory (tenant) ID GUID shown on the Microsoft Entra overview page.";
 
     /// <summary>Creates the wizard.</summary>
     public TenantSetupViewModel(
@@ -173,6 +230,24 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     /// <summary>Things verification could not check, and why.</summary>
     public ObservableCollection<string> VerificationNotChecked { get; } = [];
 
+    /// <summary>
+    /// The one-line verdict: whether this configuration can actually be used. Everything else on
+    /// the page is detail behind this answer.
+    /// </summary>
+    public string VerificationVerdict => Verification switch
+    {
+        null => "Not verified yet.",
+        { IsUsable: true } => "Ready to use. A token was issued with every required permission.",
+        { CanAcquireToken: false } => "Not ready. No token could be obtained for this configuration.",
+        _ => "Not ready. A token was issued, but it is missing at least one required permission.",
+    };
+
+    /// <summary>True once verification has run and succeeded.</summary>
+    public bool VerificationPassed => Verification?.IsUsable == true;
+
+    /// <summary>True once verification has run and did not succeed.</summary>
+    public bool VerificationFailed => Verification is not null && !Verification.IsUsable;
+
     /// <summary>Where this application stores local data, shown on the welcome page.</summary>
     public IReadOnlyList<StorageLocationInfo> StorageLocations => _paths.Describe();
 
@@ -180,6 +255,16 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     public ProductMetadata Product => _productMetadata.Metadata;
 
     /// <summary>True when a publisher has configured a bootstrap identity.</summary>
+    /// <summary>
+    /// True when a bootstrap client ID is configured, so automatic setup is ready to run.
+    /// <para>
+    /// This is deliberately <em>not</em> what gates selecting the automatic method. This build
+    /// ships no bootstrap client ID, and the Advanced field that supplies one lives on the
+    /// automatic path — so gating selection on this made the only way to enable automatic setup
+    /// reachable only after it was already enabled. Selecting the method is always allowed; the
+    /// run is guarded instead, in CreateRegistrationAsync.
+    /// </para>
+    /// </summary>
     public bool IsAutomaticSetupAvailable => _bootstrap.Current.IsConfigured;
 
     /// <summary>Why automatic setup is unavailable, when it is.</summary>
@@ -318,7 +403,7 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     /// Signs in through the system browser. For the existing-registration path this uses the
     /// supplied client ID; for automatic setup it uses the publisher's bootstrap identity.
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(IncludeCancelCommand = true)]
     private async Task SignInAsync(CancellationToken cancellationToken)
     {
         ClearMessages();
@@ -336,9 +421,19 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
             return;
         }
 
-        if (!Guid.TryParse(TenantId.Trim(), out _))
+        if (TenantIdIsRequired && !Guid.TryParse(TenantId.Trim(), out _))
         {
             ErrorMessage = "Enter your Directory (tenant) ID. It is a GUID, shown on the Entra overview page.";
+            return;
+        }
+
+        if (!TenantIdIsRequired
+            && TenantId.Trim() is { Length: > 0 } typedTenant
+            && !Guid.TryParse(typedTenant, out _))
+        {
+            ErrorMessage = "The Directory (tenant) ID is optional for a multi-organization "
+                + "registration, but if you supply one it must be a GUID.";
+
             return;
         }
 
@@ -349,6 +444,7 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
             var configuration = new TenantConfiguration
             {
                 TenantId = TenantId.Trim(),
+                Audience = UseAnyOrganization ? TenantAudience.AnyOrganization : TenantAudience.SingleTenant,
                 ClientId = clientId,
                 RequiredScopes = RequestedPermissions.Select(p => p.Scope).ToArray(),
                 Source = Method == SetupMethod.Automatic
@@ -358,20 +454,62 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
 
             await _connection.ApplyTenantAsync(configuration, cancellationToken).ConfigureAwait(true);
 
+            // The narrow tier is the default and the right answer. The broad tier exists because
+            // AppRegistration.Create is recent enough that some tenants' portal permission picker
+            // does not offer it yet, leaving Application.ReadWrite.All as the only consentable
+            // alternative. That is a real escalation -- it can modify and delete every
+            // registration in the directory, not just create one -- so it is an explicit choice
+            // the user makes and can see, never a silent fallback.
+            var bootstrapTier = UseBroadBootstrapPermission
+                ? GraphScopes.BootstrapManageTier
+                : GraphScopes.BootstrapCreateOnlyTier;
+
             var scopes = Method == SetupMethod.Automatic
-                ? GraphScopes.BootstrapCreateOnlyTier.Select(p => p.Scope).ToArray()
+                ? bootstrapTier.Select(p => p.Scope).ToArray()
                 : configuration.RequiredScopes.ToArray();
 
-            var result = await _authentication.SignInAsync(scopes, cancellationToken: cancellationToken)
-                .ConfigureAwait(true);
+            if (Method == SetupMethod.Automatic && UseBroadBootstrapPermission)
+            {
+                _logger.LogWarning(
+                    "Automatic setup is using the broad bootstrap permission tier at the user's "
+                    + "explicit request, because AppRegistration.Create was unavailable.");
+            }
+
+            using var timeout = new CancellationTokenSource(BrowserRoundTripTimeout);
+            using var linked = CancellationTokenSource
+                .CreateLinkedTokenSource(cancellationToken, timeout.Token);
+
+            // Through the coordinator, not the authentication service directly. The coordinator
+            // is what records the granted scopes, saves the tenant and moves the application to
+            // Connected; bypassing it produced a wizard that reached "Setup complete, consent
+            // granted" while every other page still showed "Not connected".
+            var result = await _connection.SignInAsync(scopes, linked.Token).ConfigureAwait(true);
 
             if (!result.Succeeded)
             {
-                ErrorMessage = Describe(result.Error);
+                // A timeout and a deliberate cancellation both arrive as a cancelled result, but
+                // they mean different things to the user and only one of them is their doing.
+                ErrorMessage = timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested
+                    ? "Sign-in did not complete within five minutes, so it was stopped. If the "
+                      + "browser showed an error instead of returning here, the Application "
+                      + "(client) ID or Directory (tenant) ID is usually wrong. Correct them and "
+                      + "sign in again."
+                    : Describe(result.Error);
+
                 return;
             }
 
             SignedInAccount = result.Account;
+
+            // For a multi-organization registration the organization is discovered, not typed.
+            // Recording it here is what lets the consent step name an explicit directory.
+            if (UseAnyOrganization
+                && result.Account?.TenantId is { Length: > 0 } discovered
+                && !string.Equals(TenantId.Trim(), discovered, StringComparison.OrdinalIgnoreCase))
+            {
+                TenantId = discovered;
+            }
+
             StatusMessage = $"Signed in as {result.Account?.DisplayName} in tenant {result.Account?.TenantId}.";
         }
         finally
@@ -402,6 +540,7 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
             var configuration = new AppRegistrationConfiguration
             {
                 DisplayName = ProposedApplicationName.Trim(),
+                Audience = UseAnyOrganization ? TenantAudience.AnyOrganization : TenantAudience.SingleTenant,
                 RequestedPermissions = RequestedPermissions.ToArray(),
             };
 
@@ -439,7 +578,33 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
 
             await _connection.SaveTenantAsync(tenantConfiguration, cancellationToken).ConfigureAwait(true);
 
-            StatusMessage = "The application registration was created. Consent is the next step.";
+            // Sign in to the registration that was just created, with the operating scopes.
+            //
+            // Without this the wizard configured the application for a client ID nobody had ever
+            // authenticated against. Consent was then requested for an app the user had no grant
+            // on, the connection never reached Connected because no sign-in with the operating
+            // scopes had happened, and the only way to actually finish was to leave the wizard
+            // and use the Home page's sign-in button. Doing it here also creates the user's
+            // grant, which is what makes consent verification able to see anything at all.
+            StatusMessage = "Registration created. Signing in to it now.";
+
+            var signIn = await SignInToNewRegistrationAsync(
+                tenantConfiguration.RequiredScopes, cancellationToken).ConfigureAwait(true);
+
+            if (!signIn.Succeeded)
+            {
+                ErrorMessage = Describe(signIn.Error)
+                    + " The registration was created successfully; only signing in to it failed. "
+                    + "Use 'Sign in' to try again.";
+
+                return;
+            }
+
+            SignedInAccount = signIn.Account;
+            RefreshRequestedPermissions();
+
+            StatusMessage = "The application registration was created and signed in to. "
+                + "If any permission still needs an administrator, the consent step is next.";
         }
         finally
         {
@@ -448,7 +613,7 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     }
 
     /// <summary>Opens Microsoft's official administrator consent experience.</summary>
-    [RelayCommand]
+    [RelayCommand(IncludeCancelCommand = true)]
     private async Task RequestConsentAsync(CancellationToken cancellationToken)
     {
         ClearMessages();
@@ -465,8 +630,15 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
 
         try
         {
+            using var timeout = new CancellationTokenSource(BrowserRoundTripTimeout);
+            using var linked = CancellationTokenSource
+                .CreateLinkedTokenSource(cancellationToken, timeout.Token);
+
             var outcome = await _consentService
-                .RequestAdminConsentAsync(tenant, RequestedPermissions.ToArray(), cancellationToken)
+                .RequestAdminConsentAsync(
+                    tenant,
+                    RequestedPermissions.ToArray(),
+                    cancellationToken: linked.Token)
                 .ConfigureAwait(true);
 
             await _auditStore.AppendAsync(new RegistrationAuditEntry
@@ -490,6 +662,32 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
 
             if (!outcome.Approved)
             {
+                // Before reporting a failure, check whether consent was needed at all. The
+                // consent endpoint can fail for reasons that have nothing to do with whether the
+                // permissions are granted -- a Conditional Access device requirement the browser
+                // cannot satisfy, for instance -- while a token carrying every required scope has
+                // already been issued. Reporting "consent failed" then sends the user to fix
+                // something that is not broken.
+                var alreadyGranted = await _consentService
+                    .VerifyConsentAsync(tenant, RequestedPermissions.ToArray(),
+                        allowInteractive: false, cancellationToken)
+                    .ConfigureAwait(true);
+
+                if (alreadyGranted.IsUsable)
+                {
+                    Verification = alreadyGranted;
+
+                    StatusMessage = "The administrator consent step did not complete, but it is not "
+                        + "needed: a token has already been issued with every permission this "
+                        + "application requires.";
+
+                    _logger.LogInformation(
+                        "Consent request failed but verification shows every required permission is "
+                        + "already granted, so the failure is not reported as a problem.");
+
+                    return;
+                }
+
                 ErrorMessage = Describe(outcome.Error);
                 await SaveAsPendingAsync(cancellationToken).ConfigureAwait(true);
                 return;
@@ -573,7 +771,8 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
         try
         {
             var verification = await _consentService
-                .VerifyConsentAsync(tenant, RequestedPermissions.ToArray(), cancellationToken)
+                .VerifyConsentAsync(tenant, RequestedPermissions.ToArray(), allowInteractive: true,
+                    cancellationToken)
                 .ConfigureAwait(true);
 
             Verification = verification;
@@ -704,12 +903,54 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
         var configuration = new AppRegistrationConfiguration
         {
             DisplayName = ProposedApplicationName,
+            Audience = UseAnyOrganization ? TenantAudience.AnyOrganization : TenantAudience.SingleTenant,
             RequestedPermissions = permissions,
         };
 
         foreach (var change in configuration.DescribePlannedChanges())
         {
             PlannedChanges.Add(change);
+        }
+    }
+
+    /// <summary>
+    /// Signs in to a registration that was created moments ago, retrying while Microsoft Entra
+    /// still reports it as unknown.
+    /// <para>
+    /// A new application is not usable the instant <c>POST /applications</c> returns 201. Entra
+    /// replicates it first, and until that finishes a sign-in fails with AADSTS700016 -- "this
+    /// app registration does not exist" -- which is true only for another second or two. Failing
+    /// the wizard on it would report a registration that was created perfectly well as broken.
+    /// </para>
+    /// </summary>
+    private async Task<AuthenticationResultInfo> SignInToNewRegistrationAsync(
+        IReadOnlyList<string> scopes,
+        CancellationToken cancellationToken)
+    {
+        var delay = TimeSpan.FromSeconds(2);
+        AuthenticationResultInfo result;
+
+        for (var attempt = 1; ; attempt++)
+        {
+            result = await _connection.SignInAsync(scopes, cancellationToken).ConfigureAwait(true);
+
+            var stillReplicating = result.Error?.Kind == GraphErrorKind.ApplicationNotFoundInTenant;
+
+            if (result.Succeeded || !stillReplicating || attempt >= NewRegistrationSignInAttempts)
+            {
+                return result;
+            }
+
+            _logger.LogInformation(
+                "The new registration is not visible to Microsoft Entra yet. "
+                + "Waiting {Delay} before attempt {NextAttempt}.",
+                delay,
+                attempt + 1);
+
+            StatusMessage = "Waiting for Microsoft to finish provisioning the new registration.";
+
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(true);
+            delay += TimeSpan.FromSeconds(3);
         }
     }
 
@@ -726,12 +967,24 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     private static string LoopbackState() =>
         Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
 
-    private static string Describe(GraphError? error) =>
-        error is null
-            ? "The operation did not succeed."
-            : error.SuggestedAction is { Length: > 0 } action
-                ? $"{error.Message} {action}"
-                : error.Message;
+    private static string Describe(GraphError? error)
+    {
+        if (error is null)
+        {
+            return "The operation did not succeed.";
+        }
+
+        var text = error.SuggestedAction is { Length: > 0 } action
+            ? $"{error.Message} {action}"
+            : error.Message;
+
+        // The Microsoft error code is included deliberately. It is the difference between a
+        // failure the user can look up or hand to an administrator and one they can only guess
+        // at, and it identifies no person, tenant, or resource.
+        return error.GraphErrorCode is { Length: > 0 } code
+            ? $"{text} (Microsoft error code: {code})"
+            : text;
+    }
 
     private void RaisePageChanged()
     {

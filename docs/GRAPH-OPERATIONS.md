@@ -159,13 +159,19 @@ requires). Chunk `PUT`s carry no `Authorization` header — the session URL is p
 
 | # | Purpose | Method + endpoint | Permission | Modifies? |
 |---|---|---|---|---|
-| 7.1 | Create the tenant-specific registration | `POST /applications` | `AppRegistration.Create` | **Yes — tenant** |
+| 7.1 | Create the registration | `POST /applications` | `AppRegistration.Create` | **Yes — tenant** |
 | 7.2 | Read a registration | `GET /applications(appId='{appId}')` | `Application.Read.All` | No |
 | 7.3 | Repair a registration | `PATCH /applications/{objectId}` | `Application.ReadWrite.All` | **Yes — tenant** |
 | 7.4 | Locate the service principal | `GET /servicePrincipals(appId='{appId}')` | `Application.Read.All` | No |
 | 7.5 | Create a service principal (repair only) | `POST /servicePrincipals` | `Application.ReadWrite.All` | **Yes — tenant** |
 | 7.6 | Inspect delegated grants (optional) | `GET /oauth2PermissionGrants?$filter=clientId eq '{spId}'` | `Directory.Read.All` | No |
 | 7.7 | Delete a registration (explicit, guarded) | `DELETE /applications/{objectId}` | `Application.ReadWrite.All` | **Yes — destructive** |
+
+The `POST` body in 7.1 carries `signInAudience`, which is `AzureADMyOrg` by default and
+`AzureADMultipleOrgs` when the user has chosen multi-organization mode. The body is always
+complete, so the create path never needs the `PATCH` in 7.3 and therefore never needs
+`Application.ReadWrite.All`. This is also why the audience cannot be changed later by this
+application — see [ADR-0011](adr/0011-multi-tenant-authority.md).
 
 ### 7.1 request body — complete, so no PATCH is needed
 
@@ -205,6 +211,12 @@ https://login.microsoftonline.com/{tenantId}/v2.0/adminconsent
   &redirect_uri={registered loopback}
   &state={cryptographically random, validated on return}
 ```
+
+`{tenantId}` is always one explicit organization: the configured tenant in single-organization
+mode, or the signed-in organization in multi-organization mode. It is **never** `organizations`
+or `common`. When the organization cannot be determined, the request is refused rather than
+broadened — an administrator signed into several directories could otherwise consent in the
+wrong one.
 
 The application never renders a consent-like screen, never collects credentials, and validates
 both `state` and the returned `tenant` before accepting the result. Success is then

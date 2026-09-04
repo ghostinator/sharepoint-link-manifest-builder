@@ -43,6 +43,33 @@
             <Button Content="Permissions"
                     Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
                     CommandParameter="permissions" />
+            <Button Content="Add organization"
+                    Command="{Binding AddOrganizationCommand}"
+                    IsVisible="{Binding IsMultiOrganization}"
+                    AutomationProperties.Name="Add another organization" />
+          </StackPanel>
+
+          <!-- Organization switcher. Only meaningful for a multi-organization registration,
+               so it stays hidden entirely for a single-organization one. -->
+          <StackPanel Spacing="6" Margin="0,8,0,0" IsVisible="{Binding CanSwitchOrganization}">
+            <TextBlock Text="Organizations signed in on this device" Classes="SectionTitle" />
+            <TextBlock Classes="Subtle" TextWrapping="Wrap"
+                       Text="Selecting one switches every selector and job in this application to that organization. Each organization keeps its own permissions and consent." />
+            <ItemsControl ItemsSource="{Binding AvailableAccounts}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Margin="0,0,0,4"
+                          Command="{Binding $parent[ItemsControl].((vm:HomeViewModel)DataContext).SwitchAccountCommand}"
+                          CommandParameter="{Binding}"
+                          AutomationProperties.Name="{Binding UserPrincipalName}">
+                    <StackPanel Spacing="2" HorizontalAlignment="Left">
+                      <TextBlock Text="{Binding UserPrincipalName}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding TenantId, StringFormat='Organization: {0}'}" Classes="Mono" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </StackPanel>
         </StackPanel>
       </Border>
