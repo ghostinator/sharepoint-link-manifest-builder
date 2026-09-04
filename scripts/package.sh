@@ -20,7 +20,20 @@ for rid in "${RIDS[@]}"; do
   say "Archiving ${rid}"
 
   if [[ "${rid}" == win-* ]]; then
-    (cd "${ARTIFACTS}/publish" && zip -qr "${archive}.zip" "${rid}")
+    # Windows users expect a zip, but the tool that makes one varies by host. A GitHub
+    # Windows runner has no `zip` on the Git Bash PATH, which is how the first release
+    # failed: publishing succeeded on all six RIDs and only the archiving step died, with
+    # "zip: command not found". Try each of the three tools that might be present.
+    if command -v zip >/dev/null 2>&1; then
+      (cd "${ARTIFACTS}/publish" && zip -qr "${archive}.zip" "${rid}")
+    elif command -v 7z >/dev/null 2>&1; then
+      (cd "${ARTIFACTS}/publish" && 7z a -tzip -bso0 -bsp0 "${archive}.zip" "${rid}" >/dev/null)
+    elif command -v powershell.exe >/dev/null 2>&1; then
+      powershell.exe -NoProfile -NonInteractive -Command \
+        "Compress-Archive -Path '${ARTIFACTS}/publish/${rid}' -DestinationPath '${archive}.zip' -Force"
+    else
+      fail "No zip tool found (tried zip, 7z, powershell). Cannot archive ${rid}."
+    fi
   else
     tar -czf "${archive}.tar.gz" -C "${ARTIFACTS}/publish" "${rid}"
   fi
