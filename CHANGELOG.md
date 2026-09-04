@@ -36,6 +36,16 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The browsers' action bar ran into the tree above it.** The bar was a horizontal `StackPanel`,
+  which overflows rather than wrapping, and it sat in a `DockPanel`, which does not clip a fill
+  child that measures taller than its slot. Both were survivable when each browser had a whole
+  window; neither survived being hosted inside a tab. SharePoint was worse than OneDrive purely
+  because it has one more button. The bar now wraps, the tree sits in a star row that cannot
+  overflow into it, and the 24px page margin the browsers carried from their standalone days is
+  gone — it was being applied on top of the job page's own padding and narrowing the tree for
+  nothing. The SharePoint side panel also shrinks before the tree does, rather than holding a
+  fixed 340px.
+
 - **A Conditional Access device requirement was reported as missing administrator approval.**
   `AADSTS50097` ("Device authentication is required") arrives from the consent endpoint as
   `interaction_required`, which the generic mapping read as "an administrator still needs to

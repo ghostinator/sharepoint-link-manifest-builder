@@ -5,7 +5,10 @@
              x:Class="SharePointLinkManifestBuilder.App.Views.SharePointBrowserView"
              x:DataType="vm:SharePointBrowserViewModel">
 
-  <Grid RowDefinitions="Auto,Auto,*" Margin="24">
+  <!-- No outer margin: these are hosted inside the job page, which already provides
+       its own padding. The 24 they carried as standalone pages was being applied on
+       top of it, narrowing the tree pane for no reason. -->
+  <Grid RowDefinitions="Auto,Auto,*">
 
     <StackPanel Grid.Row="0" Spacing="4">
       <TextBlock Text="SharePoint Sites" Classes="PageTitle" />
@@ -57,11 +60,18 @@
                  AutomationProperties.LiveSetting="Polite" />
     </StackPanel>
 
-    <Grid Grid.Row="2" ColumnDefinitions="*,340">
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
 
       <Border Grid.Column="0" Classes="Card" Padding="4" Margin="0,0,12,0">
-        <DockPanel>
-          <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="8">
+        <Grid RowDefinitions="*,Auto">
+          <!-- A Grid rather than a DockPanel, and a WrapPanel rather than a StackPanel.
+               DockPanel does not clip, so a fill child that measures taller than its slot draws
+               over the docked bar rather than being contained by it; a star row cannot do that.
+               And a horizontal StackPanel does not wrap, it overflows, which is why the action
+               bar ran into the tree once these browsers moved inside a tab and the pane got
+               narrower than the full page they used to have. -->
+          <WrapPanel Grid.Row="1" Orientation="Horizontal" ItemSpacing="8" LineSpacing="4"
+                     Margin="8,10,8,8">
             <CheckBox Content="Include subfolders" IsChecked="{Binding IncludeSubfolders}"
                       ToolTip.Tip="Applies to targets added from this page. It can be changed per target later." />
             <Button Content="Add selected as targets" Classes="Primary"
@@ -70,9 +80,9 @@
             <Button Content="Clear selection" Command="{Binding ClearSelectionCommand}" />
             <TextBlock VerticalAlignment="Center" Classes="Subtle"
                        Text="{Binding TargetCount, StringFormat='{}{0} target(s) in job'}" />
-          </StackPanel>
+          </WrapPanel>
 
-          <TreeView ItemsSource="{Binding Roots}"
+          <TreeView Grid.Row="0" ClipToBounds="True" ItemsSource="{Binding Roots}"
                     SelectedItem="{Binding SelectedNode}"
                     AutomationProperties.Name="SharePoint resource tree">
             <TreeView.Styles>
@@ -118,10 +128,10 @@
               </TreeDataTemplate>
             </TreeView.ItemTemplate>
           </TreeView>
-        </DockPanel>
+        </Grid>
       </Border>
 
-      <ScrollViewer Grid.Column="1">
+      <ScrollViewer Grid.Column="1" MaxWidth="340" MinWidth="220">
         <StackPanel Spacing="8">
 
           <Border Classes="Card">
