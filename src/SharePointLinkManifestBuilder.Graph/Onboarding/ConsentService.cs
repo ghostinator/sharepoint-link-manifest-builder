@@ -388,6 +388,24 @@ public sealed class ConsentService : IConsentService
                 + "Use 'Copy Consent Link' to send it to one.",
         },
 
+        // Conditional Access demanded a managed or compliant device and the browser could not
+        // prove one. It arrives as interaction_required, so it has to be matched ahead of the
+        // generic arm below or it reads as "an administrator still needs to approve this", which
+        // sends the user to do something that cannot work from this device.
+        _ when description?.Contains("AADSTS50097", StringComparison.OrdinalIgnoreCase) == true =>
+            new GraphError
+            {
+                Kind = GraphErrorKind.ConditionalAccessInterrupted,
+                Message = "Your organization's Conditional Access policy requires a managed or "
+                    + "compliant device before consent can be granted, and the browser could not "
+                    + "prove this device qualifies.",
+                GraphErrorCode = "AADSTS50097",
+                SuggestedAction = "Grant consent from a device your organization manages, or have an "
+                    + "administrator grant it in the Microsoft Entra admin center under Enterprise "
+                    + "applications. If a token has already been issued with every permission this "
+                    + "application needs, no further consent is required at all.",
+            },
+
         "consent_required" or "interaction_required" => new GraphError
         {
             Kind = GraphErrorKind.AdminConsentRequired,

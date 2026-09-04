@@ -58,6 +58,17 @@
     <Setter Property="Margin" Value="0,0,0,12" />
   </Style>
 
+  <!-- A verified pass. The border colour is deliberately paired with the word PASS in the
+       content, because colour alone must never be the signal. -->
+  <Style Selector="Border.Success">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="BorderBrush" Value="SeaGreen" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12" />
+    <Setter Property="Margin" Value="0,0,0,12" />
+  </Style>
+
   <!-- Destructive or blocking. Paired with an "Error:" prefix in the text. -->
   <Style Selector="Border.Danger">
     <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />

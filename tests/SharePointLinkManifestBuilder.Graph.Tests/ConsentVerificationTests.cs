@@ -112,3 +112,55 @@ public sealed class ConsentVerificationTests
             Task.CompletedTask;
     }
 }
+
+/// <summary>
+/// The consent redirect can fail for reasons unrelated to whether the permissions are granted.
+/// These pin the classification, because the wrong one sends the user to fix something that is
+/// not broken -- or worse, that cannot be fixed from the device they are on.
+/// </summary>
+public sealed class ConsentErrorMappingTests
+{
+    /// <summary>
+    /// Conditional Access demanding a managed device arrives as interaction_required, which
+    /// otherwise reads as "an administrator still needs to approve this". It is not that, and the
+    /// remedy is completely different.
+    /// </summary>
+    [Fact]
+    public void DeviceAuthenticationRequired_IsNotReportedAsMissingAdministratorApproval()
+    {
+        var error = ConsentService.MapConsentError(
+            "interaction_required",
+            "AADSTS50097: Device authentication is required. Trace ID: 00000000-0000-0000-0000-000000000000");
+
+        Assert.Equal(GraphErrorKind.ConditionalAccessInterrupted, error.Kind);
+        Assert.Contains("managed", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Entra admin center", error.SuggestedAction!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>An ordinary interaction_required still means approval is outstanding.</summary>
+    [Fact]
+    public void PlainInteractionRequired_StillMeansApprovalIsOutstanding()
+    {
+        var error = ConsentService.MapConsentError("interaction_required", "Something else entirely.");
+
+        Assert.Equal(GraphErrorKind.AdminConsentRequired, error.Kind);
+    }
+
+    /// <summary>A declined consent is a decision and must stay distinguishable from a failure.</summary>
+    [Fact]
+    public void AccessDenied_IsReportedAsDeclined()
+    {
+        var error = ConsentService.MapConsentError("access_denied", null);
+
+        Assert.Equal(GraphErrorKind.ConsentDenied, error.Kind);
+    }
+
+    /// <summary>A null description must not throw the AADSTS check.</summary>
+    [Fact]
+    public void MissingDescription_IsHandled()
+    {
+        var error = ConsentService.MapConsentError("interaction_required", null);
+
+        Assert.Equal(GraphErrorKind.AdminConsentRequired, error.Kind);
+    }
+}

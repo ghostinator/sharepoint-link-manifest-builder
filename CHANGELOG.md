@@ -36,6 +36,26 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A Conditional Access device requirement was reported as missing administrator approval.**
+  `AADSTS50097` ("Device authentication is required") arrives from the consent endpoint as
+  `interaction_required`, which the generic mapping read as "an administrator still needs to
+  approve this". It is not that: the organization requires a managed or compliant device, and no
+  amount of approving will help from a device that does not qualify. It is now classified
+  separately and names the two things that do work — consent from a managed device, or an
+  administrator granting it in the Entra admin center.
+- **Consent reported failure when consent was not needed.** The consent endpoint can fail for
+  reasons unrelated to whether the permissions are granted, while a token carrying every required
+  scope has already been issued. The wizard now verifies before reporting a failure, and says so
+  plainly when the step turned out to be unnecessary.
+
+### Changed
+
+- **Verification states a single PASS or FAIL.** The verdict came from reading three separate
+  lists and inferring one, and "Not checked" in particular read as a failure when it means the
+  opposite — there was no independent evidence to gather, because confirming those items would
+  need directory permissions this application deliberately does not request. That section now
+  says so, and the verdict that matters, taken from a real token, is stated at the top.
+
 - **Automatic setup created a registration and then left the application disconnected.** The
   wizard signed in with the bootstrap identity, created the registration, saved the new
   configuration, and went straight to consent — never signing in to the registration it had just

@@ -330,6 +330,20 @@
             </StackPanel>
           </Border>
 
+          <Border Classes="Success" IsVisible="{Binding VerificationPassed}">
+            <StackPanel Spacing="2">
+              <TextBlock Text="PASS" FontWeight="Bold" />
+              <TextBlock Text="{Binding VerificationVerdict}" Classes="Body" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="Danger" IsVisible="{Binding VerificationFailed}">
+            <StackPanel Spacing="2">
+              <TextBlock Text="FAIL" FontWeight="Bold" />
+              <TextBlock Text="{Binding VerificationVerdict}" Classes="Body" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
           <Border Classes="Warning" IsVisible="{Binding VerificationWarnings.Count}">
             <StackPanel Spacing="4">
               <TextBlock Text="Warnings" FontWeight="SemiBold" />
@@ -343,10 +357,14 @@
             </StackPanel>
           </Border>
 
-          <!-- Stated plainly rather than presented as a pass. -->
+          <!-- Stated plainly rather than presented as a pass, but also not as a failure: these
+               are things this application chose not to assert either way. -->
           <Border Classes="Notice" IsVisible="{Binding VerificationNotChecked.Count}">
             <StackPanel Spacing="4">
-              <TextBlock Text="Not checked" FontWeight="SemiBold" />
+              <TextBlock Text="Not independently checked (this is not a failure)"
+                         FontWeight="SemiBold" />
+              <TextBlock Classes="Body" TextWrapping="Wrap"
+                         Text="Confirming these would need directory permissions this application deliberately does not request. The PASS or FAIL above is the answer that matters: it comes from a real token." />
               <ItemsControl ItemsSource="{Binding VerificationNotChecked}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="x:String">

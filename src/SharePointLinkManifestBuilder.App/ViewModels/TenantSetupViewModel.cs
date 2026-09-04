@@ -157,6 +157,9 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
 
     /// <summary>The result of the last verification.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VerificationVerdict))]
+    [NotifyPropertyChangedFor(nameof(VerificationPassed))]
+    [NotifyPropertyChangedFor(nameof(VerificationFailed))]
     private RegistrationVerification? _verification;
 
     /// <summary>The consent URL, offered for copying when the user cannot consent themselves.</summary>
@@ -226,6 +229,24 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
 
     /// <summary>Things verification could not check, and why.</summary>
     public ObservableCollection<string> VerificationNotChecked { get; } = [];
+
+    /// <summary>
+    /// The one-line verdict: whether this configuration can actually be used. Everything else on
+    /// the page is detail behind this answer.
+    /// </summary>
+    public string VerificationVerdict => Verification switch
+    {
+        null => "Not verified yet.",
+        { IsUsable: true } => "Ready to use. A token was issued with every required permission.",
+        { CanAcquireToken: false } => "Not ready. No token could be obtained for this configuration.",
+        _ => "Not ready. A token was issued, but it is missing at least one required permission.",
+    };
+
+    /// <summary>True once verification has run and succeeded.</summary>
+    public bool VerificationPassed => Verification?.IsUsable == true;
+
+    /// <summary>True once verification has run and did not succeed.</summary>
+    public bool VerificationFailed => Verification is not null && !Verification.IsUsable;
 
     /// <summary>Where this application stores local data, shown on the welcome page.</summary>
     public IReadOnlyList<StorageLocationInfo> StorageLocations => _paths.Describe();
@@ -641,6 +662,32 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
 
             if (!outcome.Approved)
             {
+                // Before reporting a failure, check whether consent was needed at all. The
+                // consent endpoint can fail for reasons that have nothing to do with whether the
+                // permissions are granted -- a Conditional Access device requirement the browser
+                // cannot satisfy, for instance -- while a token carrying every required scope has
+                // already been issued. Reporting "consent failed" then sends the user to fix
+                // something that is not broken.
+                var alreadyGranted = await _consentService
+                    .VerifyConsentAsync(tenant, RequestedPermissions.ToArray(),
+                        allowInteractive: false, cancellationToken)
+                    .ConfigureAwait(true);
+
+                if (alreadyGranted.IsUsable)
+                {
+                    Verification = alreadyGranted;
+
+                    StatusMessage = "The administrator consent step did not complete, but it is not "
+                        + "needed: a token has already been issued with every permission this "
+                        + "application requires.";
+
+                    _logger.LogInformation(
+                        "Consent request failed but verification shows every required permission is "
+                        + "already granted, so the failure is not reported as a problem.");
+
+                    return;
+                }
+
                 ErrorMessage = Describe(outcome.Error);
                 await SaveAsPendingAsync(cancellationToken).ConfigureAwait(true);
                 return;
