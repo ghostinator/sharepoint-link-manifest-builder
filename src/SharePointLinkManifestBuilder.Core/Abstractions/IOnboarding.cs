@@ -216,9 +216,19 @@ public interface IConsentService
     /// Verifies consent by acquiring a real token and comparing the scopes Microsoft Entra
     /// actually issued against those required. See docs/adr/0006.
     /// </summary>
+    /// <param name="tenantConfiguration">The configuration to verify against.</param>
+    /// <param name="requiredPermissions">The permissions the application needs.</param>
+    /// <param name="allowInteractive">
+    /// When true, a silent attempt that fails only because this user has no cached grant is
+    /// retried interactively. Consent an administrator granted in the directory is invisible to
+    /// a silent request until an interactive sign-in records it for the user, so a silent-only
+    /// check reports a correctly consented tenant as unconsented.
+    /// </param>
+    /// <param name="cancellationToken">Cancels the verification.</param>
     Task<RegistrationVerification> VerifyConsentAsync(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> requiredPermissions,
+        bool allowInteractive = false,
         CancellationToken cancellationToken = default);
 }
 

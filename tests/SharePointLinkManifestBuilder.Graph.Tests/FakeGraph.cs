@@ -198,6 +198,19 @@ public sealed class FakeAuthenticationService : IAuthenticationService
     /// <summary>When false, token acquisition fails, simulating a signed-out state.</summary>
     public bool IsSignedIn { get; set; } = true;
 
+    /// <summary>
+    /// When set, a silent acquisition fails with this error and an interactive one succeeds.
+    /// Models the real AADSTS65001 case: the tenant is consented, but this user has no cached
+    /// grant, so only an interactive request can produce a token.
+    /// </summary>
+    public GraphErrorKind? SilentOnlyFailure { get; set; }
+
+    /// <summary>How many times a token was requested silently.</summary>
+    public int SilentAttempts { get; private set; }
+
+    /// <summary>How many times a token was requested interactively.</summary>
+    public int InteractiveAttempts { get; private set; }
+
     /// <summary>Scopes the fake reports as granted.</summary>
     public IReadOnlyList<string> GrantedScopes { get; set; } =
         ["User.Read", "Sites.Read.All", "Files.ReadWrite.All"];
@@ -279,8 +292,27 @@ public sealed class FakeAuthenticationService : IAuthenticationService
     public Task<AuthenticationResultInfo> AcquireTokenAsync(
         IEnumerable<string> scopes,
         bool allowInteractive = false,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(new AuthenticationResultInfo
+        CancellationToken cancellationToken = default)
+    {
+        if (allowInteractive)
+        {
+            InteractiveAttempts++;
+        }
+        else
+        {
+            SilentAttempts++;
+        }
+
+        if (SilentOnlyFailure is { } kind && !allowInteractive)
+        {
+            return Task.FromResult(new AuthenticationResultInfo
+            {
+                Succeeded = false,
+                Error = new GraphError { Kind = kind, Message = "Interaction required." },
+            });
+        }
+
+        return Task.FromResult(new AuthenticationResultInfo
         {
             Succeeded = IsSignedIn,
             Account = CurrentAccount,
@@ -289,6 +321,7 @@ public sealed class FakeAuthenticationService : IAuthenticationService
                 ? null
                 : new GraphError { Kind = GraphErrorKind.AuthenticationFailed, Message = "Not signed in." },
         });
+    }
 
     /// <inheritdoc />
     public Task<string?> GetAccessTokenAsync(

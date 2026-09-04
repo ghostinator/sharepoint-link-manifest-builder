@@ -212,9 +212,20 @@ public sealed class ConsentService : IConsentService
     }
 
     /// <inheritdoc />
+    /// <summary>
+    /// True when the failure means "this user has no cached grant", which an interactive sign-in
+    /// can resolve, rather than "consent was refused", which it cannot.
+    /// </summary>
+    private static bool NeedsInteraction(GraphError? error) =>
+        error?.Kind is GraphErrorKind.ConsentRequired
+            or GraphErrorKind.AdminConsentRequired
+            or GraphErrorKind.TokenExpired
+            or GraphErrorKind.ConditionalAccessInterrupted;
+
     public async Task<RegistrationVerification> VerifyConsentAsync(
         TenantConfiguration tenantConfiguration,
         IReadOnlyList<PermissionRequirement> requiredPermissions,
+        bool allowInteractive = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tenantConfiguration);
@@ -230,9 +241,26 @@ public sealed class ConsentService : IConsentService
         // The heart of verification: attempt a real token acquisition and read back the scopes
         // Entra issued. This needs no directory permission and tests the thing that actually
         // matters, which is whether the application can obtain a usable token.
+        //
+        // Silent first, because when a grant is already cached this answers without disturbing
+        // the user. But silent-only was wrong: a consent that an administrator has genuinely
+        // granted is invisible to this process until some interactive sign-in records it for
+        // this user, so AADSTS65001 came back and was reported as "not consented" no matter how
+        // many times the user pressed Check again. Asking silently and concluding from silence
+        // conflates "nobody has consented" with "this user has no cached grant yet".
         var token = await _authentication
             .AcquireTokenAsync(scopes, allowInteractive: false, cancellationToken)
             .ConfigureAwait(false);
+
+        if (!token.Succeeded && allowInteractive && NeedsInteraction(token.Error))
+        {
+            _logger.LogInformation(
+                "Silent verification needs interaction; retrying with an interactive sign-in.");
+
+            token = await _authentication
+                .AcquireTokenAsync(scopes, allowInteractive: true, cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         if (!token.Succeeded)
         {

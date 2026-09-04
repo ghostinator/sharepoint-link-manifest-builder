@@ -102,7 +102,8 @@ public sealed class ConnectionCoordinator
 
         if (token.Succeeded)
         {
-            await OnSignedInAsync(token, cancellationToken).ConfigureAwait(false);
+            await OnSignedInAsync(token, judgeAgainstTenantScopes: true, cancellationToken)
+                .ConfigureAwait(false);
         }
         else
         {
@@ -137,7 +138,25 @@ public sealed class ConnectionCoordinator
     }
 
     /// <summary>Signs in interactively through the system browser.</summary>
-    public async Task<AuthenticationResultInfo> SignInAsync(CancellationToken cancellationToken = default)
+    public Task<AuthenticationResultInfo> SignInAsync(CancellationToken cancellationToken = default) =>
+        SignInAsync(scopes: null, cancellationToken);
+
+    /// <summary>
+    /// Signs in, optionally with a scope set other than the tenant's configured one.
+    /// <para>
+    /// The setup wizard needs this: automatic setup signs in with the bootstrap tier, which is
+    /// deliberately different from the scopes the finished configuration will use. Before this
+    /// overload existed the wizard called the authentication service directly, which meant
+    /// <see cref="OnSignedInAsync"/> never ran -- so a wizard that had just signed in
+    /// successfully left <see cref="State"/> untouched and the rest of the application still
+    /// believed it was disconnected.
+    /// </para>
+    /// </summary>
+    /// <param name="scopes">Scopes to request, or null to use the tenant's configured scopes.</param>
+    /// <param name="cancellationToken">Cancels the sign-in.</param>
+    public async Task<AuthenticationResultInfo> SignInAsync(
+        IReadOnlyList<string>? scopes,
+        CancellationToken cancellationToken = default)
     {
         if (Tenant is null)
         {
@@ -154,12 +173,22 @@ public sealed class ConnectionCoordinator
         }
 
         var result = await _authentication
-            .SignInAsync(Tenant.RequiredScopes, cancellationToken: cancellationToken)
+            .SignInAsync(scopes ?? Tenant.RequiredScopes, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
         if (result.Succeeded)
         {
-            await OnSignedInAsync(result, cancellationToken).ConfigureAwait(false);
+            // Judge consent on what was actually asked for, not on whether the caller passed an
+            // argument. A caller that names the tenant's own scopes -- which the setup wizard
+            // does on the existing-registration path -- must be judged exactly as if it had
+            // passed none; keying off "scopes is null" reintroduced the very bug this overload
+            // exists to fix, and left that path stuck at Not connected.
+            var askedForOperatingScopes = scopes is null
+                || Tenant.RequiredScopes.All(r =>
+                    scopes.Contains(r, StringComparer.OrdinalIgnoreCase));
+
+            await OnSignedInAsync(result, askedForOperatingScopes, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         return result;
@@ -205,7 +234,8 @@ public sealed class ConnectionCoordinator
             // Re-resolves the organization name and re-raises the change event, so every browser
             // and selector in the application repopulates against the new organization rather
             // than showing stale data from the previous one.
-            await OnSignedInAsync(result, cancellationToken).ConfigureAwait(false);
+            await OnSignedInAsync(result, judgeAgainstTenantScopes: true, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         return result;
@@ -251,8 +281,15 @@ public sealed class ConnectionCoordinator
         await ApplyTenantAsync(configuration, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <param name="judgeAgainstTenantScopes">
+    /// False when the sign-in deliberately requested something other than the tenant's operating
+    /// scopes -- automatic setup signs in with the bootstrap tier. Comparing those against the
+    /// operating scopes would mark a perfectly good tenant as partially consented purely because
+    /// a setup-time sign-in asked for a different, smaller set.
+    /// </param>
     private async Task OnSignedInAsync(
         AuthenticationResultInfo result,
+        bool judgeAgainstTenantScopes,
         CancellationToken cancellationToken)
     {
         if (Tenant is null)
@@ -261,6 +298,16 @@ public sealed class ConnectionCoordinator
         }
 
         var granted = result.GrantedScopes;
+
+        if (!judgeAgainstTenantScopes)
+        {
+            // The account and its token are real, so the rest of the application should see the
+            // sign-in; only the consent verdict is withheld until a sign-in that actually asked
+            // for the operating scopes.
+            await ResolveTenantNameAsync(cancellationToken).ConfigureAwait(false);
+            RaiseChanged();
+            return;
+        }
 
         var missing = Tenant.RequiredScopes
             .Where(s => !granted.Contains(s, StringComparer.OrdinalIgnoreCase))

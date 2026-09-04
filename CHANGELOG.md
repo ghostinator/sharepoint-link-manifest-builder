@@ -36,6 +36,21 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Consent verification reported a correctly consented tenant as unconsented.** It acquired a
+  token silently and concluded from the failure that nobody had consented. Consent an
+  administrator has granted in the directory is invisible to a silent request until some
+  interactive sign-in records a grant for that user, so AADSTS65001 came back and "Check again"
+  changed nothing however many times it was pressed. A user-initiated check now escalates to an
+  interactive sign-in when, and only when, the failure means "no cached grant" — a refusal is a
+  decision and is not re-prompted.
+- **Completing the setup wizard left the application saying "Not connected".** The wizard signed
+  in through the authentication service directly, bypassing the coordinator that records granted
+  scopes, saves the tenant and moves the application to Connected. The wizard could therefore
+  reach "Setup complete, consent granted" while every other page still showed a disconnected
+  application, and the only way to actually connect was the Home page's sign-in button. The
+  wizard now signs in through the coordinator, which gained an overload for the deliberately
+  different scope set automatic setup needs.
+
 - **The per-file results grid was unreachable without enlarging the window.** The results tab
   docked its progress card and manifest list to the top with no height limit, so they took
   whatever they wanted and the grid showing what the job actually did got only the leftovers.

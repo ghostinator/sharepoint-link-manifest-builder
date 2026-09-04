@@ -452,8 +452,11 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
             using var linked = CancellationTokenSource
                 .CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
-            var result = await _authentication.SignInAsync(scopes, cancellationToken: linked.Token)
-                .ConfigureAwait(true);
+            // Through the coordinator, not the authentication service directly. The coordinator
+            // is what records the granted scopes, saves the tenant and moves the application to
+            // Connected; bypassing it produced a wizard that reached "Setup complete, consent
+            // granted" while every other page still showed "Not connected".
+            var result = await _connection.SignInAsync(scopes, linked.Token).ConfigureAwait(true);
 
             if (!result.Succeeded)
             {
@@ -689,7 +692,8 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
         try
         {
             var verification = await _consentService
-                .VerifyConsentAsync(tenant, RequestedPermissions.ToArray(), cancellationToken)
+                .VerifyConsentAsync(tenant, RequestedPermissions.ToArray(), allowInteractive: true,
+                    cancellationToken)
                 .ConfigureAwait(true);
 
             Verification = verification;
