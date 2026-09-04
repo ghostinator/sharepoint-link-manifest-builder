@@ -36,6 +36,15 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Opening the "another user's OneDrive" panel pushed the tree off the window with no way to
+  scroll.** The browsers had two `Auto` rows above their star row, so the controls could grow
+  without limit and take the tree's space with them. With the expander open the tree collapsed to
+  its action bar, and the top-aligned *Selected item* card spilled out of a row that no longer
+  had room for it — `Grid` does not clip, so that read as misalignment rather than as the
+  overflow it was. The controls now scroll inside a cap, the tree region has a floor, and the
+  side panel scrolls rather than growing past its row. Applied to the SharePoint browser too,
+  which had the identical structure.
+
 - **The browsers' action bar ran into the tree above it.** The bar was a horizontal `StackPanel`,
   which overflows rather than wrapping, and it sat in a `DockPanel`, which does not clip a fill
   child that measures taller than its slot. Both were survivable when each browser had a whole

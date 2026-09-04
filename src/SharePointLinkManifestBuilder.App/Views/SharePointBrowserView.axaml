@@ -8,15 +8,18 @@
   <!-- No outer margin: these are hosted inside the job page, which already provides
        its own padding. The 24 they carried as standalone pages was being applied on
        top of it, narrowing the tree pane for no reason. -->
-  <Grid RowDefinitions="Auto,Auto,*">
+  <!-- Two rows, not three, for the reason spelled out in OneDriveBrowserView: two Auto rows
+       above a star row let the controls grow without limit and squeeze the tree to nothing,
+       and Grid does not clip what spills out. -->
+  <Grid RowDefinitions="Auto,*">
 
-    <StackPanel Grid.Row="0" Spacing="4">
+    <ScrollViewer Grid.Row="0" MaxHeight="340" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="4">
       <TextBlock Text="SharePoint Sites" Classes="PageTitle" />
       <TextBlock Classes="Subtle"
                  Text="Expand a site to its document libraries, then into folders. Tick anything you want to process." />
-    </StackPanel>
 
-    <StackPanel Grid.Row="1" Spacing="8" Margin="0,12">
+    <StackPanel Spacing="8" Margin="0,12">
 
       <!-- Search scope honesty notice: the index is not the whole tenant. -->
       <Border Classes="Notice">
@@ -60,7 +63,10 @@
                  AutomationProperties.LiveSetting="Polite" />
     </StackPanel>
 
-    <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+      </StackPanel>
+    </ScrollViewer>
+
+    <Grid Grid.Row="1" MinHeight="240" ColumnDefinitions="*,Auto">
 
       <Border Grid.Column="0" Classes="Card" Padding="4" Margin="0,0,12,0">
         <Grid RowDefinitions="*,Auto">

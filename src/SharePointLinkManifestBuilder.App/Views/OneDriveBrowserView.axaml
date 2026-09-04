@@ -8,15 +8,21 @@
   <!-- No outer margin: these are hosted inside the job page, which already provides
        its own padding. The 24 they carried as standalone pages was being applied on
        top of it, narrowing the tree pane for no reason. -->
-  <Grid RowDefinitions="Auto,Auto,*">
+  <!-- Two rows, not three. The header and the controls were both Auto, so opening the
+       "another user's OneDrive" expander grew them without limit and took the star row's space
+       with it: the tree collapsed to its action bar, and the top-aligned Selected item card
+       spilled out of a row that no longer had room for it. Grid does not clip, so that read as
+       misalignment rather than as the overflow it was. The controls now scroll inside a cap,
+       and the tree region has a floor. -->
+  <Grid RowDefinitions="Auto,*">
 
-    <StackPanel Grid.Row="0" Spacing="4">
+    <ScrollViewer Grid.Row="0" MaxHeight="340" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="4">
       <TextBlock Text="OneDrive" Classes="PageTitle" />
       <TextBlock Classes="Subtle"
                  Text="Browse your own OneDrive, or another user's where your permissions allow it." />
-    </StackPanel>
 
-    <StackPanel Grid.Row="1" Spacing="8" Margin="0,12">
+    <StackPanel Spacing="8" Margin="0,12">
       <StackPanel Orientation="Horizontal" Spacing="8">
         <Button Content="Open My OneDrive" Classes="Primary" Command="{Binding LoadMyDriveCommand}" />
         <ProgressBar IsIndeterminate="True" Width="80" IsVisible="{Binding IsBusy}"
@@ -79,7 +85,10 @@
                  AutomationProperties.LiveSetting="Polite" />
     </StackPanel>
 
-    <Grid Grid.Row="2" ColumnDefinitions="*,320">
+      </StackPanel>
+    </ScrollViewer>
+
+    <Grid Grid.Row="1" MinHeight="240" ColumnDefinitions="*,Auto">
 
       <Border Grid.Column="0" Classes="Card" Padding="4" Margin="0,0,12,0">
         <Grid RowDefinitions="*,Auto">
@@ -153,7 +162,9 @@
         </Grid>
       </Border>
 
-      <Border Grid.Column="1" Classes="Card" VerticalAlignment="Top">
+      <ScrollViewer Grid.Column="1" MaxWidth="320" MinWidth="220"
+                    VerticalScrollBarVisibility="Auto">
+        <Border Classes="Card" VerticalAlignment="Top">
         <StackPanel Spacing="6">
           <TextBlock Text="Selected item" Classes="SectionTitle" Margin="0" />
           <TextBlock Classes="Subtle" Text="Nothing selected."
@@ -185,7 +196,8 @@
             </Expander>
           </StackPanel>
         </StackPanel>
-      </Border>
+        </Border>
+      </ScrollViewer>
     </Grid>
   </Grid>
 </UserControl>
