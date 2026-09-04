@@ -57,4 +57,21 @@ public abstract partial class PageViewModelBase : ViewModelBase
     /// </summary>
     public virtual Task OnNavigatedToAsync(CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
+
+    /// <summary>
+    /// Raised when a page asks to move somewhere else, carrying the destination's navigation key.
+    /// <para>
+    /// Navigation was previously only expressible in XAML, by reaching up to the window's data
+    /// context. That works for a button whose entire job is to navigate, but not for one that
+    /// has to do something first: a button invokes one command, so "load this and take me there"
+    /// could only ever do the loading. The result was buttons that named a destination and then
+    /// stayed put.
+    /// </para>
+    /// </summary>
+    public event EventHandler<string>? NavigationRequested;
+
+    /// <summary>Asks the shell to navigate, after this page has finished its own work.</summary>
+    /// <param name="navigationKey">The destination page's key.</param>
+    protected void RequestNavigation(string navigationKey) =>
+        NavigationRequested?.Invoke(this, navigationKey);
 }

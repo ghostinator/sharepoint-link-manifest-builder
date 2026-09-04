@@ -28,6 +28,7 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
     private readonly IProductMetadataProvider _productMetadata;
     private readonly IClipboardService _clipboard;
     private readonly ISystemBrowser _browser;
+    private readonly IProfileStore _profileStore;
     private readonly ILogger<NewLinkJobViewModel> _logger;
 
     private CancellationTokenSource? _runCancellation;
@@ -242,9 +243,12 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
         ISystemBrowser browser,
         SharePointBrowserViewModel sharePointBrowser,
         OneDriveBrowserViewModel oneDriveBrowser,
+        IProfileStore profileStore,
         ILogger<NewLinkJobViewModel> logger)
         : base("New Link Job", "job")
     {
+        _profileStore = profileStore ?? throw new ArgumentNullException(nameof(profileStore));
+
         SharePointBrowser = sharePointBrowser
             ?? throw new ArgumentNullException(nameof(sharePointBrowser));
 
@@ -906,6 +910,49 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasStartBlockedReason));
         OnPropertyChanged(nameof(IsStartBlocked));
         StartCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>Name to save the current configuration under.</summary>
+    [ObservableProperty]
+    private string _profileName = string.Empty;
+
+    /// <summary>
+    /// Saves the configuration being built as a reusable profile, without leaving the page.
+    /// <para>
+    /// Saving previously existed only on the Saved Profiles page. Since it saves the shared
+    /// draft, the sequence was: build the job here, navigate away, type a name, save, navigate
+    /// back. The action belongs where the thing being saved is.
+    /// </para>
+    /// </summary>
+    [RelayCommand]
+    private async Task SaveAsProfileAsync(CancellationToken cancellationToken)
+    {
+        ClearMessages();
+
+        if (string.IsNullOrWhiteSpace(ProfileName))
+        {
+            ErrorMessage = "Give the profile a name.";
+            return;
+        }
+
+        if (_connection.Tenant is null)
+        {
+            ErrorMessage = "Connect to Microsoft 365 first.";
+            return;
+        }
+
+        var profile = new SavedProfile
+        {
+            Name = ProfileName.Trim(),
+            Configuration = _draft.ToConfiguration(
+                _connection.Tenant.TenantId,
+                _connection.TenantDisplayName ?? _connection.Tenant.TenantDisplayName),
+        };
+
+        await _profileStore.SaveAsync(profile, cancellationToken).ConfigureAwait(true);
+
+        StatusMessage = $"Saved '{profile.Name}'. It is on the Saved Profiles page.";
+        ProfileName = string.Empty;
     }
 
     /// <summary>Moves to the previous step.</summary>

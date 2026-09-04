@@ -715,7 +715,8 @@ public sealed partial class JobHistoryViewModel : PageViewModelBase
         }
 
         _draft.LoadFrom(configuration);
-        StatusMessage = "Configuration loaded into New Link Job. Review it, then preview before running.";
+        StatusMessage = "Configuration loaded. Review it, then preview before running.";
+        RequestNavigation("job");
     }
 
     /// <summary>Copies a sanitized report for the selected run.</summary>
@@ -880,6 +881,10 @@ public sealed partial class SavedProfilesViewModel : PageViewModelBase
 
         _draft.LoadFrom(SelectedProfile.Configuration);
         StatusMessage = $"Loaded '{SelectedProfile.Name}'. Review it, then preview before running.";
+
+        // The button says "into New Link Job", so go there. Loading the draft and staying put
+        // left the user to work out for themselves that anything had happened.
+        RequestNavigation("job");
     }
 
     /// <summary>Deletes the selected profile.</summary>

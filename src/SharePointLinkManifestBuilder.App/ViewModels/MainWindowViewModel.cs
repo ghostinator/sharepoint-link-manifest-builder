@@ -53,6 +53,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         _currentPage = home;
         _connection.ConnectionChanged += (_, _) => RaiseConnectionProperties();
+
+        // A page that has just moved something into the shared job draft can now say where the
+        // user should end up, instead of leaving them on a page whose work is done.
+        foreach (var page in Pages)
+        {
+            page.NavigationRequested += async (_, key) =>
+                await NavigateToAsync(key).ConfigureAwait(true);
+        }
     }
 
     /// <summary>Every navigable page, in navigation order.</summary>
