@@ -108,6 +108,13 @@ public sealed partial class ResourceNodeViewModel : ObservableObject
     /// <summary>The parent node, or null at the root.</summary>
     public ResourceNodeViewModel? Parent { get; private set; }
 
+    /// <summary>
+    /// True for a node at the top of a tree, which for the OneDrive browser means a whole drive
+    /// rather than a folder inside one. Used to offer actions that apply to the drive itself. A
+    /// root never acquires a parent, so this needs no change notification.
+    /// </summary>
+    public bool IsRoot => Parent is null;
+
     /// <summary>Child nodes, possibly holding a single placeholder until first expansion.</summary>
     public ObservableCollection<ResourceNodeViewModel> Children { get; } = [];
 

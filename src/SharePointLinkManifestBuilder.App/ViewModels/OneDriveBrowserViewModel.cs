@@ -123,18 +123,18 @@ public sealed partial class OneDriveBrowserViewModel : PageViewModelBase
                 return;
             }
 
-            var existing = Roots.FirstOrDefault(r =>
-                string.Equals(r.DriveId, drive.Value!.DriveId, StringComparison.OrdinalIgnoreCase));
+            var existing = FindRootByDriveId(drive.Value!.DriveId);
 
             if (existing is not null)
             {
-                SelectedNode = existing;
+                RevealOnly(existing);
+                StatusMessage = "Your OneDrive is already open.";
                 return;
             }
 
             var node = CreateDriveNode(drive.Value!, TargetSourceType.MyOneDrive, "My OneDrive");
             Roots.Insert(0, node);
-            node.IsExpanded = true;
+            RevealOnly(node);
 
             StatusMessage = "Opened your OneDrive.";
         }
@@ -222,6 +222,22 @@ public sealed partial class OneDriveBrowserViewModel : PageViewModelBase
                 return;
             }
 
+            // Identity is the drive, not the person who was searched for: two directory entries
+            // can resolve to the same drive, and the same person can be selected twice. Opening
+            // a second copy would give the user two subtrees whose checkboxes disagree about
+            // the same files.
+            var alreadyOpen = FindRootByDriveId(drive.Value!.DriveId);
+
+            if (alreadyOpen is not null)
+            {
+                RevealOnly(alreadyOpen);
+
+                StatusMessage = $"{SelectedUser.DisplayName}'s OneDrive is already open. "
+                    + "Showing it rather than opening a second copy.";
+
+                return;
+            }
+
             var node = CreateDriveNode(
                 drive.Value! with
                 {
@@ -232,7 +248,9 @@ public sealed partial class OneDriveBrowserViewModel : PageViewModelBase
                 $"{SelectedUser.DisplayName}'s OneDrive");
 
             Roots.Add(node);
-            node.IsExpanded = true;
+            RevealOnly(node);
+            OnPropertyChanged(nameof(HasOtherUserDrives));
+            CloseOtherUserDrivesCommand.NotifyCanExecuteChanged();
 
             StatusMessage = $"Opened {SelectedUser.DisplayName}'s OneDrive.";
         }
@@ -240,6 +258,74 @@ public sealed partial class OneDriveBrowserViewModel : PageViewModelBase
         {
             IsBusy = false;
         }
+    }
+
+    private ResourceNodeViewModel? FindRootByDriveId(string driveId) =>
+        Roots.FirstOrDefault(r =>
+            string.Equals(r.DriveId, driveId, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Expands one drive and collapses every other, so the drive just opened is the one on
+    /// screen.
+    /// <para>
+    /// Several expanded drives at once is not a useful view: each is a full folder tree, and the
+    /// one the user just asked for ends up below however much of the previous ones happens to be
+    /// showing. Collapsing does not discard anything -- loaded children stay loaded, so
+    /// re-expanding costs no further Graph calls, and any targets already added are untouched.
+    /// </para>
+    /// </summary>
+    private void RevealOnly(ResourceNodeViewModel node)
+    {
+        foreach (var root in Roots)
+        {
+            root.IsExpanded = ReferenceEquals(root, node);
+        }
+
+        SelectedNode = node;
+    }
+
+    /// <summary>True when at least one other user's OneDrive is open.</summary>
+    public bool HasOtherUserDrives =>
+        Roots.Any(r => r.SourceType == TargetSourceType.UserOneDrive);
+
+    /// <summary>Closes one open drive, leaving any targets already added from it alone.</summary>
+    [RelayCommand]
+    private void CloseDrive(ResourceNodeViewModel? node)
+    {
+        if (node is null || !Roots.Remove(node))
+        {
+            return;
+        }
+
+        OnPropertyChanged(nameof(HasOtherUserDrives));
+        CloseDriveCommand.NotifyCanExecuteChanged();
+        CloseOtherUserDrivesCommand.NotifyCanExecuteChanged();
+
+        // Deliberately not removing targets added from this drive. They were an explicit choice
+        // and are listed on the Targets step, where they can be removed individually; dropping
+        // them here would undo that choice silently as a side effect of tidying the tree.
+        StatusMessage = $"Closed {node.DisplayName}. Any targets already added from it are unchanged.";
+    }
+
+    /// <summary>Closes every other user's OneDrive, keeping your own.</summary>
+    [RelayCommand(CanExecute = nameof(HasOtherUserDrives))]
+    private void CloseOtherUserDrives()
+    {
+        var closed = Roots
+            .Where(r => r.SourceType == TargetSourceType.UserOneDrive)
+            .ToArray();
+
+        foreach (var root in closed)
+        {
+            Roots.Remove(root);
+        }
+
+        OnPropertyChanged(nameof(HasOtherUserDrives));
+        CloseOtherUserDrivesCommand.NotifyCanExecuteChanged();
+
+        StatusMessage = closed.Length == 1
+            ? "Closed 1 other user's OneDrive. Any targets already added are unchanged."
+            : $"Closed {closed.Length} other users' OneDrives. Any targets already added are unchanged.";
     }
 
     /// <summary>Adds every checked node as a processing target.</summary>

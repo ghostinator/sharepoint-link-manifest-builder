@@ -95,6 +95,11 @@
             <Button Content="Add selected as targets" Classes="Primary"
                     Command="{Binding AddSelectedAsTargetsCommand}" />
             <Button Content="Clear selection" Command="{Binding ClearSelectionCommand}" />
+            <Button Content="Close other users' drives"
+                    Command="{Binding CloseOtherUserDrivesCommand}"
+                    IsVisible="{Binding HasOtherUserDrives}"
+                    ToolTip.Tip="Closes every OneDrive except your own. Targets already added are kept."
+                    AutomationProperties.Name="Close every other user's OneDrive" />
             <TextBlock VerticalAlignment="Center" Classes="Subtle"
                        Text="{Binding TargetCount, StringFormat='{}{0} target(s) in job'}" />
           </WrapPanel>
@@ -134,6 +139,11 @@
                                  AutomationProperties.Name="Loading folder contents" />
                     <Button Content="Retry" FontSize="11" Padding="6,2" IsVisible="{Binding CanRetry}"
                             Command="{Binding $parent[TreeView].((vm:OneDriveBrowserViewModel)DataContext).RetryNodeCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Content="Close" FontSize="11" Padding="6,2" IsVisible="{Binding IsRoot}"
+                            ToolTip.Tip="Close this OneDrive. Targets already added from it are kept."
+                            AutomationProperties.Name="Close this OneDrive"
+                            Command="{Binding $parent[TreeView].((vm:OneDriveBrowserViewModel)DataContext).CloseDriveCommand}"
                             CommandParameter="{Binding}" />
                   </StackPanel>
                 </Grid>
