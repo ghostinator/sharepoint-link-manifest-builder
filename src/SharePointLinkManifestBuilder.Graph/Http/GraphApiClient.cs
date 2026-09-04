@@ -37,6 +37,17 @@ public sealed class GraphApiClient : IGraphApiClient
     internal static readonly JsonSerializerOptions SerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true,
+
+        // Microsoft Graph names every property in camelCase, and this policy is what makes the
+        // DTOs serialize that way. Without it every request body went out in PascalCase.
+        // Reading was unaffected -- PropertyNameCaseInsensitive covers that -- and Graph is
+        // lenient enough about scalar properties that most writes were accepted anyway, so the
+        // mismatch survived a long time. It is not lenient about complex ones: a registration
+        // POST carrying "PublicClient" was rejected outright with
+        // "Invalid property 'PublicClient'". Properties that are not simply camelCase, such as
+        // "@microsoft.graph.conflictBehavior", carry [JsonPropertyName] and override this.
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 

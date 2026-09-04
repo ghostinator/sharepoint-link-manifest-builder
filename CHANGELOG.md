@@ -36,6 +36,15 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Automatic setup could not create a registration (`Request_BadRequest`).** Every JSON request
+  body was serialized in PascalCase: the Graph transport set `PropertyNameCaseInsensitive`, which
+  fixes reading, but never set a naming policy, so writes went out as `DisplayName` and
+  `PublicClient` rather than `displayName` and `publicClient`. Microsoft Graph is lenient about
+  scalar properties, which is why sharing links and manifest writes worked, and strict about
+  complex ones, which is why a registration POST was rejected with `Invalid property
+  'PublicClient'`. The transport now uses camelCase; properties that are not simply camelCase,
+  such as `@microsoft.graph.conflictBehavior`, carry `[JsonPropertyName]` and are unaffected.
+
 - **Consent verification reported a correctly consented tenant as unconsented.** It acquired a
   token silently and concluded from the failure that nobody had consented. Consent an
   administrator has granted in the directory is invisible to a silent request until some
