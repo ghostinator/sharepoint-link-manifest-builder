@@ -36,6 +36,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The per-file results grid was unreachable without enlarging the window.** The results tab
+  docked its progress card and manifest list to the top with no height limit, so they took
+  whatever they wanted and the grid showing what the job actually did got only the leftovers.
+  The tab is now a two-row grid: the top section is capped and scrolls internally, and the grid
+  has the remaining space with a floor under it. The manifest list also stretches to the full
+  width and starts collapsed, so the grid has room the moment a job finishes.
 - **Long lists on the Preview and Results tabs consumed the whole page.** Manifests written,
   preflight warnings and preflight blockers are now collapsible and internally scrollable, so a
   job that writes one manifest per folder no longer pushes the progress card and results grid

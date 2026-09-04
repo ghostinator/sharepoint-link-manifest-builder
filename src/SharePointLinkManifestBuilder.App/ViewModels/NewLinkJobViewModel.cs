@@ -307,7 +307,9 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
 
             if (ValidationProblems.Count > 0)
             {
-                return "Fix these first: " + string.Join(" ", ValidationProblems);
+                return ValidationProblems.Count == 1
+                    ? "Fix the problem listed below before starting."
+                    : $"Fix the {ValidationProblems.Count} problems listed below before starting.";
             }
 
             if (_preview is null)
@@ -318,8 +320,9 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
             if (!_preview.Preflight.CanProceed)
             {
                 return PreflightBlockers.Count > 0
-                    ? "Blocked: " + string.Join(" ", PreflightBlockers)
-                    : "Blocked: the preview found a problem that prevents this job from running.";
+                    ? "The preview found problems that prevent this job from running. "
+                      + "See 'Blocked' below."
+                    : "The preview found a problem that prevents this job from running.";
             }
 
             return DryRun

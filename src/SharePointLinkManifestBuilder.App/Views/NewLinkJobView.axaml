@@ -293,13 +293,16 @@
                          AutomationProperties.LiveSetting="Polite" />
             </Border>
 
-            <ItemsControl ItemsSource="{Binding ValidationProblems}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="x:String">
-                  <TextBlock Text="{Binding}" Foreground="IndianRed" Classes="Body" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding ValidationProblems}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <TextBlock Text="{Binding}" Foreground="IndianRed" Classes="Body"
+                               TextWrapping="Wrap" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
           </StackPanel>
 
           <ScrollViewer>
@@ -422,8 +425,9 @@
 
       <!-- ============================ RUN AND RESULTS ============================ -->
       <TabItem Header="6. Run and results">
-        <DockPanel Margin="0,12">
-          <StackPanel DockPanel.Dock="Top" Spacing="8">
+        <Grid RowDefinitions="Auto,*" Margin="0,12">
+          <ScrollViewer Grid.Row="0" MaxHeight="380" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="8">
 
             <Border Classes="Card">
               <StackPanel Spacing="6">
@@ -465,7 +469,8 @@
               </StackPanel>
             </Border>
 
-            <Expander IsVisible="{Binding ManifestResults.Count}" IsExpanded="True"
+            <Expander IsVisible="{Binding ManifestResults.Count}" IsExpanded="False"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                       AutomationProperties.Name="Manifests written">
               <Expander.Header>
                 <TextBlock Text="{Binding ManifestResults.Count, StringFormat='Manifests written ({0})'}"
@@ -504,9 +509,10 @@
               </StackPanel>
             </Expander>
           </StackPanel>
+          </ScrollViewer>
 
-          <DataGrid ItemsSource="{Binding Results}" IsReadOnly="True"
-                    GridLinesVisibility="Horizontal" Margin="0,12,0,0"
+          <DataGrid Grid.Row="1" ItemsSource="{Binding Results}" IsReadOnly="True"
+                    GridLinesVisibility="Horizontal" Margin="0,12,0,0" MinHeight="200"
                     AutomationProperties.Name="Per-file results">
             <DataGrid.Columns>
               <DataGridTextColumn Header="File" Binding="{Binding File.Name}" Width="220" />
@@ -526,7 +532,7 @@
               <DataGridTextColumn Header="Detail" Binding="{Binding Error.Message}" Width="280" />
             </DataGrid.Columns>
           </DataGrid>
-        </DockPanel>
+        </Grid>
       </TabItem>
     </TabControl>
   </Grid>
