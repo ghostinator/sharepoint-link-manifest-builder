@@ -7,6 +7,10 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.0] - 2026-09-04
+
 ### Added
 
 - **Licence: GNU General Public License version 3 or later.** `LICENSE` holds the verbatim text
@@ -257,8 +261,10 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - No Graph operation has been executed against a live Microsoft 365 tenant.
 - Automatic tenant setup is unavailable until a publisher supplies a bootstrap client ID.
 - Release artifacts are unsigned and un-notarized.
-- Publisher metadata, including the privacy policy URL, is a placeholder.
+- Publisher metadata is set. The update endpoint is deliberately unset until there is a
+  release feed, so the in-application update check is unavailable and says so.
 - Telemetry is not implemented; the opt-in setting exists but no pipeline does.
 - `Sites.Selected` is documented but graphical site assignment is not implemented.
 
-[Unreleased]: https://example.invalid/PLACEHOLDER-SOURCE/compare/main...HEAD
+[Unreleased]: https://github.com/ghostinator/sharepoint-link-manifest-builder/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/ghostinator/sharepoint-link-manifest-builder/releases/tag/v0.1.0
