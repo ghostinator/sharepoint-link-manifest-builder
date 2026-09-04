@@ -41,9 +41,10 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   without limit and take the tree's space with them. With the expander open the tree collapsed to
   its action bar, and the top-aligned *Selected item* card spilled out of a row that no longer
   had room for it — `Grid` does not clip, so that read as misalignment rather than as the
-  overflow it was. The controls now scroll inside a cap, the tree region has a floor, and the
-  side panel scrolls rather than growing past its row. Applied to the SharePoint browser too,
-  which had the identical structure.
+  overflow it was. Each browser is now one scroll region covering the header, the controls, the
+  tree and the details panel, with the action bar pinned below it so the primary action is
+  reachable without scrolling back to find it. Applied to the SharePoint browser too, which had
+  the identical structure.
 
 - **The browsers' action bar ran into the tree above it.** The bar was a horizontal `StackPanel`,
   which overflows rather than wrapping, and it sat in a `DockPanel`, which does not clip a fill

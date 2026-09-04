@@ -5,24 +5,25 @@
              x:Class="SharePointLinkManifestBuilder.App.Views.OneDriveBrowserView"
              x:DataType="vm:OneDriveBrowserViewModel">
 
-  <!-- No outer margin: these are hosted inside the job page, which already provides
-       its own padding. The 24 they carried as standalone pages was being applied on
-       top of it, narrowing the tree pane for no reason. -->
-  <!-- Two rows, not three. The header and the controls were both Auto, so opening the
-       "another user's OneDrive" expander grew them without limit and took the star row's space
-       with it: the tree collapsed to its action bar, and the top-aligned Selected item card
-       spilled out of a row that no longer had room for it. Grid does not clip, so that read as
-       misalignment rather than as the overflow it was. The controls now scroll inside a cap,
-       and the tree region has a floor. -->
-  <Grid RowDefinitions="Auto,*">
+  <!-- One scroll region for the whole browser, with the action bar pinned outside it.
+       Bounding each part separately (a cap on the controls, a floor under the tree, a third
+       scroll for the side panel) put three scrollbars in competition for one gesture and left
+       every region cramped at once. Letting the content take its natural height and scrolling
+       the lot is simpler and gives each part the room it asks for. The action bar stays out of
+       the scroll so the primary action is reachable without scrolling back to find it. -->
+  <Grid RowDefinitions="*,Auto">
 
-    <ScrollViewer Grid.Row="0" MaxHeight="340" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+      <StackPanel Spacing="12">
+
       <StackPanel Spacing="4">
       <TextBlock Text="OneDrive" Classes="PageTitle" />
       <TextBlock Classes="Subtle"
                  Text="Browse your own OneDrive, or another user's where your permissions allow it." />
 
-    <StackPanel Spacing="8" Margin="0,12">
+      </StackPanel>
+
+      <StackPanel Spacing="8">
       <StackPanel Orientation="Horizontal" Spacing="8">
         <Button Content="Open My OneDrive" Classes="Primary" Command="{Binding LoadMyDriveCommand}" />
         <ProgressBar IsIndeterminate="True" Width="80" IsVisible="{Binding IsBusy}"
@@ -85,35 +86,11 @@
                  AutomationProperties.LiveSetting="Polite" />
     </StackPanel>
 
-      </StackPanel>
-    </ScrollViewer>
 
-    <Grid Grid.Row="1" MinHeight="240" ColumnDefinitions="*,Auto">
+      <Grid ColumnDefinitions="*,Auto">
 
-      <Border Grid.Column="0" Classes="Card" Padding="4" Margin="0,0,12,0">
-        <Grid RowDefinitions="*,Auto">
-          <!-- A Grid rather than a DockPanel, and a WrapPanel rather than a StackPanel.
-               DockPanel does not clip, so a fill child that measures taller than its slot draws
-               over the docked bar rather than being contained by it; a star row cannot do that.
-               And a horizontal StackPanel does not wrap, it overflows, which is why the action
-               bar ran into the tree once these browsers moved inside a tab and the pane got
-               narrower than the full page they used to have. -->
-          <WrapPanel Grid.Row="1" Orientation="Horizontal" ItemSpacing="8" LineSpacing="4"
-                     Margin="8,10,8,8">
-            <CheckBox Content="Include subfolders" IsChecked="{Binding IncludeSubfolders}" />
-            <Button Content="Add selected as targets" Classes="Primary"
-                    Command="{Binding AddSelectedAsTargetsCommand}" />
-            <Button Content="Clear selection" Command="{Binding ClearSelectionCommand}" />
-            <Button Content="Close other users' drives"
-                    Command="{Binding CloseOtherUserDrivesCommand}"
-                    IsVisible="{Binding HasOtherUserDrives}"
-                    ToolTip.Tip="Closes every OneDrive except your own. Targets already added are kept."
-                    AutomationProperties.Name="Close every other user's OneDrive" />
-            <TextBlock VerticalAlignment="Center" Classes="Subtle"
-                       Text="{Binding TargetCount, StringFormat='{}{0} target(s) in job'}" />
-          </WrapPanel>
-
-          <TreeView Grid.Row="0" ClipToBounds="True" ItemsSource="{Binding Roots}" SelectedItem="{Binding SelectedNode}"
+        <Border Grid.Column="0" Classes="Card" Padding="4">
+          <TreeView ItemsSource="{Binding Roots}" SelectedItem="{Binding SelectedNode}"
                     AutomationProperties.Name="OneDrive resource tree">
             <TreeView.Styles>
               <!-- Without this the view model never learns that the user expanded a node, so
@@ -159,12 +136,10 @@
               </TreeDataTemplate>
             </TreeView.ItemTemplate>
           </TreeView>
-        </Grid>
-      </Border>
+        </Border>
 
-      <ScrollViewer Grid.Column="1" MaxWidth="320" MinWidth="220"
-                    VerticalScrollBarVisibility="Auto">
-        <Border Classes="Card" VerticalAlignment="Top">
+        <Border Grid.Column="1" Classes="Card" VerticalAlignment="Top"
+                MaxWidth="320" MinWidth="220" Margin="12,0,0,0">
         <StackPanel Spacing="6">
           <TextBlock Text="Selected item" Classes="SectionTitle" Margin="0" />
           <TextBlock Classes="Subtle" Text="Nothing selected."
@@ -197,7 +172,27 @@
           </StackPanel>
         </StackPanel>
         </Border>
-      </ScrollViewer>
-    </Grid>
+
+      </Grid>
+
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="1" Classes="Card" Margin="0,12,0,0" Padding="4">
+        <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="4"
+                   Margin="8,10,8,8">
+          <CheckBox Content="Include subfolders" IsChecked="{Binding IncludeSubfolders}" />
+          <Button Content="Add selected as targets" Classes="Primary"
+                  Command="{Binding AddSelectedAsTargetsCommand}" />
+          <Button Content="Clear selection" Command="{Binding ClearSelectionCommand}" />
+          <Button Content="Close other users' drives"
+                  Command="{Binding CloseOtherUserDrivesCommand}"
+                  IsVisible="{Binding HasOtherUserDrives}"
+                  ToolTip.Tip="Closes every OneDrive except your own. Targets already added are kept."
+                  AutomationProperties.Name="Close every other user's OneDrive" />
+          <TextBlock VerticalAlignment="Center" Classes="Subtle"
+                     Text="{Binding TargetCount, StringFormat='{}{0} target(s) in job'}" />
+        </WrapPanel>
+    </Border>
   </Grid>
 </UserControl>
