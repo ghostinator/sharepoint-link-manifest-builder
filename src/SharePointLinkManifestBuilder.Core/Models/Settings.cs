@@ -1,7 +1,8 @@
 namespace SharePointLinkManifestBuilder.Core.Models;
 
 /// <summary>
-/// Publisher and product metadata. Values are PLACEHOLDER until a publisher sets them; the
+/// Publisher and product metadata. A fork that redistributes this application replaces these;
+/// anything still reading PLACEHOLDER is reported rather than shown as though it were real. The
 /// About and Help screens display them verbatim so a placeholder is visible rather than hidden.
 /// </summary>
 public sealed record ProductMetadata
@@ -10,38 +11,46 @@ public sealed record ProductMetadata
     public string ProductName { get; init; } = "SharePoint Link Manifest Builder";
 
     /// <summary>Publisher name.</summary>
-    public string Publisher { get; init; } = "PLACEHOLDER-PUBLISHER";
+    public string Publisher { get; init; } = "Brandon Cook";
 
     /// <summary>Product homepage.</summary>
-    public string HomepageUrl { get; init; } = "https://example.invalid/PLACEHOLDER-HOMEPAGE";
+    public string HomepageUrl { get; init; } = "https://github.com/ghostinator/sharepoint-link-manifest-builder";
 
     /// <summary>Support landing page.</summary>
-    public string SupportUrl { get; init; } = "https://example.invalid/PLACEHOLDER-SUPPORT";
+    public string SupportUrl { get; init; } = "https://github.com/ghostinator/sharepoint-link-manifest-builder/issues";
 
     /// <summary>Privacy policy, shown on the consent review page.</summary>
-    public string PrivacyPolicyUrl { get; init; } = "https://example.invalid/PLACEHOLDER-PRIVACY";
+    public string PrivacyPolicyUrl { get; init; } = "https://github.com/ghostinator/sharepoint-link-manifest-builder/blob/main/docs/PRIVACY.md";
 
     /// <summary>Terms of use.</summary>
-    public string TermsUrl { get; init; } = "https://example.invalid/PLACEHOLDER-TERMS";
+    public string TermsUrl { get; init; } = "https://github.com/ghostinator/sharepoint-link-manifest-builder/blob/main/LICENSE";
 
     /// <summary>Source repository.</summary>
-    public string SourceCodeUrl { get; init; } = "https://example.invalid/PLACEHOLDER-SOURCE";
+    public string SourceCodeUrl { get; init; } = "https://github.com/ghostinator/sharepoint-link-manifest-builder";
 
     /// <summary>Issue tracker.</summary>
-    public string IssueTrackerUrl { get; init; } = "https://example.invalid/PLACEHOLDER-ISSUES";
+    public string IssueTrackerUrl { get; init; } = "https://github.com/ghostinator/sharepoint-link-manifest-builder/issues";
 
     /// <summary>Endpoint consulted by a manual update check. No automatic check is performed.</summary>
     public string UpdateCheckUrl { get; init; } = "https://example.invalid/PLACEHOLDER-UPDATES";
 
     /// <summary>Contact address for security and support correspondence.</summary>
-    public string ContactAddress { get; init; } = "PLACEHOLDER-CONTACT@example.invalid";
+    public string ContactAddress { get; init; } = "github@ghostinator.co";
 
-    /// <summary>True when any value is still a placeholder, so the UI can say so plainly.</summary>
+    /// <summary>
+    /// True when the publisher identity is still unset, so the UI can say so plainly.
+    /// <para>
+    /// <see cref="UpdateCheckUrl"/> is deliberately excluded. It is unset until a release exists
+    /// to check against, which is a different and expected condition, and the About page already
+    /// reports it specifically. Including it here would keep a "publisher details are not set"
+    /// warning on screen after they had been, which is the opposite of what the warning is for.
+    /// </para>
+    /// </summary>
     public bool HasPlaceholders =>
         new[]
         {
             Publisher, HomepageUrl, SupportUrl, PrivacyPolicyUrl, TermsUrl,
-            SourceCodeUrl, IssueTrackerUrl, UpdateCheckUrl, ContactAddress,
+            SourceCodeUrl, IssueTrackerUrl, ContactAddress,
         }.Any(v => v.Contains("PLACEHOLDER", StringComparison.OrdinalIgnoreCase));
 }
 

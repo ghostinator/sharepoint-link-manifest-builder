@@ -2,11 +2,11 @@ blank_issues_enabled: false
 
 contact_links:
   - name: Security vulnerability
-    url: https://example.invalid/PLACEHOLDER-SECURITY-ADVISORY
+    url: https://github.com/ghostinator/sharepoint-link-manifest-builder/security/advisories/new
     about: >
       Do NOT open a public issue for a security vulnerability. Report it privately.
       See SECURITY.md for how.
 
   - name: Question or discussion
-    url: https://example.invalid/PLACEHOLDER-DISCUSSIONS
+    url: https://github.com/ghostinator/sharepoint-link-manifest-builder/issues
     about: For questions about using the application, rather than a defect report.

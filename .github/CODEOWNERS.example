@@ -4,12 +4,12 @@
 # owner would silently request review from someone who never agreed to it.
 
 # Default owner for everything.
-# *                            @PLACEHOLDER-OWNER/maintainers
+# *                            @ghostinator/maintainers
 
 # Security-sensitive areas warrant a dedicated reviewer.
-# /src/SharePointLinkManifestBuilder.Graph/Identity/    @PLACEHOLDER-OWNER/security
-# /src/SharePointLinkManifestBuilder.Graph/Onboarding/  @PLACEHOLDER-OWNER/security
-# /docs/THREAT-MODEL.md                                 @PLACEHOLDER-OWNER/security
-# /SECURITY.md                                          @PLACEHOLDER-OWNER/security
-# /scripts/scan-secrets.sh                              @PLACEHOLDER-OWNER/security
-# /.github/workflows/                                   @PLACEHOLDER-OWNER/maintainers
+# /src/SharePointLinkManifestBuilder.Graph/Identity/    @ghostinator/security
+# /src/SharePointLinkManifestBuilder.Graph/Onboarding/  @ghostinator/security
+# /docs/THREAT-MODEL.md                                 @ghostinator/security
+# /SECURITY.md                                          @ghostinator/security
+# /scripts/scan-secrets.sh                              @ghostinator/security
+# /.github/workflows/                                   @ghostinator/maintainers

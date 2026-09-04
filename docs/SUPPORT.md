@@ -16,7 +16,7 @@
 | A question about permissions, consent or tenant configuration | Open a security-configuration question |
 | **A security vulnerability** | **Do not open an issue.** See [SECURITY.md](../SECURITY.md) |
 
-Issue templates: <https://example.invalid/PLACEHOLDER-ISSUES>
+Issue templates: <https://github.com/ghostinator/sharepoint-link-manifest-builder/issues>
 
 > Placeholder. A publisher replaces this before distribution.
 

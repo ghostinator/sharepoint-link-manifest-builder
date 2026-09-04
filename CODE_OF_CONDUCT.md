@@ -47,7 +47,7 @@ officially representing the community in public spaces.
 
 ## Enforcement
 
-Report abusive, harassing or otherwise unacceptable behaviour to `PLACEHOLDER-CONDUCT@example.invalid`.
+Report abusive, harassing or otherwise unacceptable behaviour to `github@ghostinator.co`.
 
 > Placeholder. A publisher replaces this before distribution.
 

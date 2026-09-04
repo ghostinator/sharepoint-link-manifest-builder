@@ -8,7 +8,7 @@ Report privately using either:
 
 1. **GitHub private vulnerability reporting** — the Security tab, then *Report a vulnerability*.
    Preferred: it keeps the report, the discussion and the advisory together.
-2. **Email** — `PLACEHOLDER-SECURITY@example.invalid`
+2. **Email** — `github@ghostinator.co`
 
 > The email address above is a placeholder. A publisher replaces it before distribution. If it
 > is still a placeholder, use GitHub private vulnerability reporting.

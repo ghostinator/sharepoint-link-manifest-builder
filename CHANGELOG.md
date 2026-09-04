@@ -70,6 +70,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Publisher metadata is filled in.** Contact, security, conduct and privacy addresses, the
+  homepage, support, source and issue URLs, and the copyright and company fields now carry real
+  values instead of placeholders. Privacy and terms point at `docs/PRIVACY.md` and `LICENSE`,
+  which exist, rather than pages nobody has written. The update endpoint is deliberately still
+  unset, which is what keeps the update check disabled until there is a release to check against.
+
 - **Loading a profile or a past run now arrives at the job page.** Both buttons name New Link Job
   as their destination, loaded the shared draft, and then stayed where they were, leaving the
   user to work out that anything had happened.
