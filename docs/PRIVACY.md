@@ -127,7 +127,7 @@ Material changes to this document will be noted in `CHANGELOG.md`.
 
 ## Contact
 
-`PLACEHOLDER-PRIVACY@example.invalid`
+`github@ghostinator.co`
 
 > Placeholder. A publisher replaces this, and the privacy policy URL shown on the consent
 > screen, before distribution.

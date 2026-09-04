@@ -34,11 +34,11 @@
   <!-- PLACEHOLDER publisher metadata. Replace before public distribution. -->
   <PropertyGroup>
     <Product>SharePoint Link Manifest Builder</Product>
-    <Company>PLACEHOLDER-PUBLISHER</Company>
-    <Authors>PLACEHOLDER-PUBLISHER</Authors>
-    <Copyright>Copyright (c) PLACEHOLDER-PUBLISHER</Copyright>
-    <PackageProjectUrl>https://example.invalid/PLACEHOLDER-OWNER/sharepoint-link-manifest-builder</PackageProjectUrl>
-    <RepositoryUrl>https://example.invalid/PLACEHOLDER-OWNER/sharepoint-link-manifest-builder</RepositoryUrl>
+    <Company>Brandon Cook</Company>
+    <Authors>Brandon Cook</Authors>
+    <Copyright>Copyright (c) Brandon Cook</Copyright>
+    <PackageProjectUrl>https://github.com/ghostinator/sharepoint-link-manifest-builder</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ghostinator/sharepoint-link-manifest-builder</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 

@@ -46,8 +46,14 @@ log() { echo "$*" | tee -a "${REPORT}"; }
 #
 #   yourdomain / yourcompany / your-tenant
 #       Illustrative placeholders in the documentation.
+#
+#   github@ghostinator\.co
+#       This project's published contact address, in SECURITY.md, CODE_OF_CONDUCT.md,
+#       PRIVACY.md and the product metadata. It is deliberately public, so the scanner
+#       flagging it is the rule working rather than failing. Exempted as a literal string
+#       rather than by weakening the email rule, so a real tenant UPN is still caught.
 # ---------------------------------------------------------------------------
-ALLOWLIST='example\.sharepoint|example-my\.sharepoint|example\.(com|org|net|test|invalid)|contoso|fabrikam|adventure-works|PLACEHOLDER|your-tenant|yourcompany|yourdomain|tenant-name|localhost|00000000-0000-0000-0000-000000000000|11111111-1111|22222222-2222|33333333-3333|44444444-4444|FAKE-TEST-TOKEN|eyJzdWIiOiJ0ZXN0In0|schemas\.microsoft\.com|microsoftonline\.com|graph\.microsoft\.com|sharepoint\.com/dev|learn\.microsoft\.com|entra\.microsoft\.com|github\.com/cli'
+ALLOWLIST='example\.sharepoint|example-my\.sharepoint|example\.(com|org|net|test|invalid)|contoso|fabrikam|adventure-works|PLACEHOLDER|your-tenant|yourcompany|yourdomain|tenant-name|localhost|00000000-0000-0000-0000-000000000000|11111111-1111|22222222-2222|33333333-3333|44444444-4444|FAKE-TEST-TOKEN|eyJzdWIiOiJ0ZXN0In0|schemas\.microsoft\.com|microsoftonline\.com|graph\.microsoft\.com|sharepoint\.com/dev|learn\.microsoft\.com|entra\.microsoft\.com|github\.com/cli|github@ghostinator\.co'
 
 # Paths whose content is expected to describe the patterns themselves.
 SELF_REFERENTIAL='^\.gitignore$|^scripts/scan-secrets\.sh$|^\.github/workflows/security\.yml$|^docs/THREAT-MODEL\.md$|^docs/GITHUB-PUBLISHING\.md$'
