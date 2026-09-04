@@ -9,6 +9,14 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Licence: GNU General Public License version 3 or later.** `LICENSE` holds the verbatim text
+  and `LICENSE-SELECTION.md` records why version 3 was chosen — two dependencies are Apache-2.0,
+  which is compatible with GPLv3 but not GPLv2.
+- **Back and Next buttons beside the job step tabs**, with a "Step N of 6" position label.
+- **An explanation next to the Start button** saying why the job cannot start, or that dry run
+  is on and will change nothing. A disabled button previously said something was wrong but never
+  what.
+
 - **An explicit opt-in for a broader bootstrap permission.** `AppRegistration.Create` is the
   least-privileged permission documented for `POST /applications` and remains the default, but
   some tenants' portal permission picker does not list it yet. Advanced now offers
@@ -27,6 +35,13 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   mode, and are refused rather than guessed when the organization is not yet known.
 
 ### Fixed
+
+- **Long lists on the Preview and Results tabs consumed the whole page.** Manifests written,
+  preflight warnings and preflight blockers are now collapsible and internally scrollable, so a
+  job that writes one manifest per folder no longer pushes the progress card and results grid
+  out of view.
+- **Start job now sits beside Build preview** on the Preview tab, rather than at the bottom of
+  the Results tab, so the build-then-run sequence is in one place.
 
 - **Builds failed intermittently inside cloud-synced folders.** A clone under OneDrive, iCloud
   Drive, Dropbox or Google Drive hits `MSB3026`/`MSB3027` ("Access to the path ... is denied")

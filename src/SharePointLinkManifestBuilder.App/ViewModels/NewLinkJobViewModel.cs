@@ -34,9 +34,18 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
     private PauseToken? _pauseToken;
     private JobPreview? _preview;
 
+    /// <summary>How many steps the job page has. The step tabs are numbered 1 to this.</summary>
+    public const int StepCount = 6;
+
     /// <summary>The tab currently shown: 0 targets, 1 link, 2 manifest, 3 filters, 4 preview, 5 results.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StepPosition))]
+    [NotifyCanExecuteChangedFor(nameof(PreviousStepCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextStepCommand))]
     private int _selectedTabIndex;
+
+    /// <summary>A human-readable position, for the label between the Back and Next buttons.</summary>
+    public string StepPosition => $"Step {SelectedTabIndex + 1} of {StepCount}";
 
     /// <summary>Requested link permission.</summary>
     [ObservableProperty]
@@ -277,6 +286,55 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
     /// <summary>True when a preview has been produced and the job may be started.</summary>
     public bool CanStart => _preview is not null && _preview.Preflight.CanProceed && !IsRunning;
 
+    /// <summary>
+    /// Why the job cannot start, or what it will do differently if it does. Empty when the job is
+    /// ready to run and will run for real.
+    /// <para>
+    /// A disabled button with no explanation is the worst of both worlds: the user can see that
+    /// something is wrong but not what, and the reasons here are all actionable. Dry run is
+    /// included even though it does not block anything, because "the job ran and created nothing"
+    /// is otherwise indistinguishable from a failure.
+    /// </para>
+    /// </summary>
+    public string StartBlockedReason
+    {
+        get
+        {
+            if (IsRunning)
+            {
+                return "A job is already running.";
+            }
+
+            if (ValidationProblems.Count > 0)
+            {
+                return "Fix these first: " + string.Join(" ", ValidationProblems);
+            }
+
+            if (_preview is null)
+            {
+                return "Build a preview before the job can be started.";
+            }
+
+            if (!_preview.Preflight.CanProceed)
+            {
+                return PreflightBlockers.Count > 0
+                    ? "Blocked: " + string.Join(" ", PreflightBlockers)
+                    : "Blocked: the preview found a problem that prevents this job from running.";
+            }
+
+            return DryRun
+                ? "Dry run is on. This will enumerate, filter and validate, but create no links "
+                  + "and write no manifests. Clear the dry-run box to make real changes."
+                : string.Empty;
+        }
+    }
+
+    /// <summary>True when there is something to say about starting, blocking or otherwise.</summary>
+    public bool HasStartBlockedReason => StartBlockedReason.Length > 0;
+
+    /// <summary>True when the explanation is a blocker rather than a note about dry run.</summary>
+    public bool IsStartBlocked => !CanStart;
+
     /// <summary>True when the audience needs a recipient list.</summary>
     public bool ShowRecipients => LinkAudience == LinkAudience.SpecificPeople;
 
@@ -408,7 +466,7 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
         finally
         {
             IsBusy = false;
-            OnPropertyChanged(nameof(CanStart));
+            NotifyStartStateChanged();
         }
     }
 
@@ -471,7 +529,7 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
         {
             IsRunning = false;
             IsPaused = false;
-            OnPropertyChanged(nameof(CanStart));
+            NotifyStartStateChanged();
         }
     }
 
@@ -563,7 +621,7 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
             Targets.Add(target);
         }
 
-        OnPropertyChanged(nameof(CanStart));
+        NotifyStartStateChanged();
     }
 
     private void ApplyPreview(JobPreview preview)
@@ -796,5 +854,32 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
 
     partial void OnUseExpirationChanged(bool value) => OnPropertyChanged(nameof(LinkSummary));
 
-    partial void OnIsRunningChanged(bool value) => OnPropertyChanged(nameof(CanStart));
+    partial void OnIsRunningChanged(bool value) => NotifyStartStateChanged();
+
+    partial void OnDryRunChanged(bool value) => NotifyStartStateChanged();
+
+    /// <summary>
+    /// Raises change notification for everything the Start button and its explanation depend on.
+    /// Kept together so the button and the sentence beside it can never disagree.
+    /// </summary>
+    private void NotifyStartStateChanged()
+    {
+        OnPropertyChanged(nameof(CanStart));
+        OnPropertyChanged(nameof(StartBlockedReason));
+        OnPropertyChanged(nameof(HasStartBlockedReason));
+        OnPropertyChanged(nameof(IsStartBlocked));
+        StartCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>Moves to the previous step.</summary>
+    [RelayCommand(CanExecute = nameof(CanGoToPreviousStep))]
+    private void PreviousStep() => SelectedTabIndex--;
+
+    private bool CanGoToPreviousStep() => SelectedTabIndex > 0;
+
+    /// <summary>Moves to the next step.</summary>
+    [RelayCommand(CanExecute = nameof(CanGoToNextStep))]
+    private void NextStep() => SelectedTabIndex++;
+
+    private bool CanGoToNextStep() => SelectedTabIndex < StepCount - 1;
 }

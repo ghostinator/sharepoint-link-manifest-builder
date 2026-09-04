@@ -1,5 +1,44 @@
 # Licence selection
 
+**Decided: GNU General Public License, version 3 or later (`GPL-3.0-or-later`).**
+
+The full text is in [LICENSE](LICENSE), taken verbatim from
+<https://www.gnu.org/licenses/gpl-3.0.txt>.
+
+## Why version 3, and why "or later"
+
+Version 3 rather than 2 because two dependencies are Apache-2.0, which is compatible with GPLv3
+but **not** with GPLv2 — its patent-termination clause counts as an additional restriction under
+version 2. Choosing version 2 would have made the dependency set unusable.
+
+"Or later" follows the boilerplate the FSF recommends and keeps the door open to a future
+version without needing every contributor's agreement to relicense.
+
+## What this means in practice
+
+- Anyone may use, study, modify and redistribute the software.
+- A distributed derivative must also be GPL-3.0-or-later and must ship its source.
+- Running it inside an organisation is not distribution, so internal modifications carry no
+  publication obligation.
+- There is no warranty. Sections 15 and 16 disclaim it.
+
+## Dependency compatibility
+
+Every third-party dependency is MIT, BSD-3-Clause or Apache-2.0. All three are one-way
+compatible with GPL-3.0: their code may be combined into a GPL-3.0 work. None imposes a
+condition that GPL-3.0 cannot satisfy. The inventory is in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+## Not done
+
+Per-file copyright headers. The GPL recommends them but does not require them, and the licence
+applies to the work as a whole through this file and `LICENSE`. Adding them across the tree is a
+mechanical change that can be made later without affecting the licence's validity.
+
+---
+
+## Original analysis, retained for the record
+
 **No licence has been chosen yet.** Until a `LICENSE` file exists in the repository root,
 default copyright applies: nobody is granted permission to use, copy, modify or distribute this
 software. That is deliberate — a licence is a decision for the publisher, and guessing one would
