@@ -36,6 +36,23 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Automatic setup created a registration and then left the application disconnected.** The
+  wizard signed in with the bootstrap identity, created the registration, saved the new
+  configuration, and went straight to consent — never signing in to the registration it had just
+  created. So consent was requested for an application the user had no grant on, the connection
+  never reached Connected because no sign-in with the operating scopes had happened, and the only
+  way to finish was to leave the wizard and use the Home page's sign-in button. The wizard now
+  signs in to the new registration immediately after creating it, which establishes the user's
+  grant and completes the connection.
+- **A newly created registration is not usable immediately.** Microsoft Entra replicates it
+  first, and until that finishes a sign-in fails with AADSTS700016 — "this app registration does
+  not exist" — which is true only for a second or two. The sign-in now retries with backoff over
+  roughly half a minute rather than reporting a correctly created registration as broken.
+- **A failed consent request logged nothing.** Every failure path returned an error to the UI and
+  wrote "ConsentRequested (failed)" to the audit history, leaving the log silent about why. The
+  error Microsoft returned, the state-mismatch rejection, and a redirect that returns without
+  granting are now each logged.
+
 - **Automatic setup could not create a registration (`Request_BadRequest`).** Every JSON request
   body was serialized in PascalCase: the Graph transport set `PropertyNameCaseInsensitive`, which
   fixes reading, but never set a naming policy, so writes went out as `DisplayName` and

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using SharePointLinkManifestBuilder.Core.Abstractions;
 using SharePointLinkManifestBuilder.Core.Models;
+using SharePointLinkManifestBuilder.Core.Security;
 
 namespace SharePointLinkManifestBuilder.Graph.Onboarding;
 
@@ -163,6 +164,9 @@ public sealed class ConsentService : IConsentService
 
         if (redirect.StateMismatch)
         {
+            _logger.LogWarning(
+                "The consent redirect did not carry the expected state value and was rejected.");
+
             return new ConsentOutcome
             {
                 Approved = false,
@@ -196,12 +200,24 @@ public sealed class ConsentService : IConsentService
 
         if (redirect.Error is not null)
         {
+            _logger.LogWarning(
+                "Administrator consent failed. Microsoft returned error {ConsentError}: {Detail}",
+                redirect.Error,
+                SensitiveDataRedactor.Redact(redirect.ErrorDescription ?? "no description"));
+
             return new ConsentOutcome
             {
                 Approved = false,
                 ReturnedTenantId = redirect.TenantId,
                 Error = MapConsentError(redirect.Error, redirect.ErrorDescription),
             };
+        }
+
+        if (!redirect.AdminConsentGranted)
+        {
+            _logger.LogWarning(
+                "The consent redirect returned without granting consent. This is what Microsoft "
+                + "sent back, and is usually an administrator declining or lacking the role.");
         }
 
         return new ConsentOutcome

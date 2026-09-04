@@ -85,6 +85,12 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
     /// </summary>
     private static readonly TimeSpan BrowserRoundTripTimeout = TimeSpan.FromMinutes(5);
 
+    /// <summary>
+    /// How many times to try signing in to a freshly created registration. With the backoff
+    /// below this spans roughly half a minute, which comfortably covers Entra replication.
+    /// </summary>
+    private const int NewRegistrationSignInAttempts = 5;
+
     /// <summary>The page currently shown.</summary>
     [ObservableProperty]
     private SetupWizardPage _currentPage = SetupWizardPage.Welcome;
@@ -551,7 +557,33 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
 
             await _connection.SaveTenantAsync(tenantConfiguration, cancellationToken).ConfigureAwait(true);
 
-            StatusMessage = "The application registration was created. Consent is the next step.";
+            // Sign in to the registration that was just created, with the operating scopes.
+            //
+            // Without this the wizard configured the application for a client ID nobody had ever
+            // authenticated against. Consent was then requested for an app the user had no grant
+            // on, the connection never reached Connected because no sign-in with the operating
+            // scopes had happened, and the only way to actually finish was to leave the wizard
+            // and use the Home page's sign-in button. Doing it here also creates the user's
+            // grant, which is what makes consent verification able to see anything at all.
+            StatusMessage = "Registration created. Signing in to it now.";
+
+            var signIn = await SignInToNewRegistrationAsync(
+                tenantConfiguration.RequiredScopes, cancellationToken).ConfigureAwait(true);
+
+            if (!signIn.Succeeded)
+            {
+                ErrorMessage = Describe(signIn.Error)
+                    + " The registration was created successfully; only signing in to it failed. "
+                    + "Use 'Sign in' to try again.";
+
+                return;
+            }
+
+            SignedInAccount = signIn.Account;
+            RefreshRequestedPermissions();
+
+            StatusMessage = "The application registration was created and signed in to. "
+                + "If any permission still needs an administrator, the consent step is next.";
         }
         finally
         {
@@ -831,6 +863,47 @@ public sealed partial class TenantSetupViewModel : PageViewModelBase
         foreach (var change in configuration.DescribePlannedChanges())
         {
             PlannedChanges.Add(change);
+        }
+    }
+
+    /// <summary>
+    /// Signs in to a registration that was created moments ago, retrying while Microsoft Entra
+    /// still reports it as unknown.
+    /// <para>
+    /// A new application is not usable the instant <c>POST /applications</c> returns 201. Entra
+    /// replicates it first, and until that finishes a sign-in fails with AADSTS700016 -- "this
+    /// app registration does not exist" -- which is true only for another second or two. Failing
+    /// the wizard on it would report a registration that was created perfectly well as broken.
+    /// </para>
+    /// </summary>
+    private async Task<AuthenticationResultInfo> SignInToNewRegistrationAsync(
+        IReadOnlyList<string> scopes,
+        CancellationToken cancellationToken)
+    {
+        var delay = TimeSpan.FromSeconds(2);
+        AuthenticationResultInfo result;
+
+        for (var attempt = 1; ; attempt++)
+        {
+            result = await _connection.SignInAsync(scopes, cancellationToken).ConfigureAwait(true);
+
+            var stillReplicating = result.Error?.Kind == GraphErrorKind.ApplicationNotFoundInTenant;
+
+            if (result.Succeeded || !stillReplicating || attempt >= NewRegistrationSignInAttempts)
+            {
+                return result;
+            }
+
+            _logger.LogInformation(
+                "The new registration is not visible to Microsoft Entra yet. "
+                + "Waiting {Delay} before attempt {NextAttempt}.",
+                delay,
+                attempt + 1);
+
+            StatusMessage = "Waiting for Microsoft to finish provisioning the new registration.";
+
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(true);
+            delay += TimeSpan.FromSeconds(3);
         }
     }
 
