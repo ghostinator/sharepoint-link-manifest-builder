@@ -77,6 +77,23 @@ jobs:
           done
           echo "Samples use synthetic values only."
 
+      - name: Check for cloud-sync conflict artifacts
+        run: |
+          # A cloud-sync client resolves a conflict by duplicating the path with a numeric
+          # suffix -- "Models" becomes "Models 2". Committed from a synced working copy, that
+          # renames a directory without breaking the build, because C# namespaces do not follow
+          # the folder name and the project globs its sources. It therefore reaches main
+          # silently. This is the check that stops it.
+          if matches="$(git ls-files | grep -E ' [0-9]+(/|\.|$)')"; then
+            echo "Paths that look like cloud-sync conflict copies are tracked:"
+            echo "${matches}"
+            echo
+            echo "Rename them back, for example: git mv 'dir 2' dir"
+            exit 1
+          fi
+
+          echo "No cloud-sync conflict artifacts are tracked."
+
       - name: Check that no core TODO placeholders remain
         run: |
           set -uo pipefail
