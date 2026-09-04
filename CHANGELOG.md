@@ -36,6 +36,11 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The per-job concurrency gate was never disposed.** `CreateLinksAsync` creates a
+  `SemaphoreSlim` per run and left it to the finalizer. Found by CodeQL's first analysis after
+  the repository became public — the upload had never succeeded before, so nothing had been
+  reviewed.
+
 - **Opening the "another user's OneDrive" panel pushed the tree off the window with no way to
   scroll.** The browsers had two `Auto` rows above their star row, so the controls could grow
   without limit and take the tree's space with them. With the expander open the tree collapsed to

@@ -9,9 +9,11 @@ through a point-and-click tree. Preview exactly what will be processed. Create s
 using the permission and audience you choose, where tenant policy allows. Write the resulting
 manifests back into SharePoint or OneDrive.
 
-> **Status.** This build has never been run against a live Microsoft 365 tenant. Everything is
-> exercised against a mocked Microsoft Graph. See [Limitations](#limitations) for exactly what
-> that means and what remains unverified.
+> **Status.** The core flow has been run end to end against a real Microsoft 365 tenant on
+> macOS: creating the app registration, signing in, browsing SharePoint and OneDrive, creating
+> sharing links, and writing manifests back. Windows and Linux are built and tested in CI but
+> have not been exercised against a tenant, and there is no released build yet. See
+> [Limitations](#limitations) for what is and is not verified.
 
 ---
 
@@ -113,6 +115,15 @@ provider such as `gnome-keyring`.
 ./scripts/run.sh              # run the application
 ```
 
+The scripts detect a clone inside a cloud-sync folder (OneDrive, iCloud Drive, Dropbox, Google
+Drive) and redirect build output to `~/.cache/splmb-build`, because a sync client that wants to
+upload each of the thousands of files a .NET build writes will intermittently hold one and fail
+the copy. Set `SPLMB_ARTIFACTS_PATH` to choose a different location.
+
+Run only one build at a time. Two concurrent builds of the same project write to the same output
+directory and collide, which MSBuild reports as `MSB3026` and "Access to the path is denied" —
+a message that reads like a permissions problem and is not one.
+
 Or with the SDK directly:
 
 ```bash
@@ -197,23 +208,30 @@ The full analysis, with residual risks, is in [docs/THREAT-MODEL.md](docs/THREAT
 
 Stated plainly rather than buried.
 
-1. **No live-tenant validation.** No Graph call in this build has been executed against a real
-   Microsoft 365 tenant. All 383 tests run against a mocked transport. Request shapes were
-   written against the Microsoft Graph v1.0 reference, but real-world behaviour — particularly
-   tenant policy responses — is unverified.
-2. **Automatic setup is unavailable** until a publisher supplies a bootstrap client ID.
-3. **Artifacts are unsigned and un-notarized.** No signing credentials exist here.
-4. **Publisher metadata is a placeholder**, including the privacy policy URL shown on the
+1. **Live-tenant validation is partial.** The core flow works against a real tenant on macOS:
+   registration, sign-in, consent, browsing, link creation and manifest writing. Not exercised
+   against a tenant: **Windows and Linux** (built and tested in CI only), sovereign clouds,
+   throttling under load, and switching between organizations. The 478 tests run against a
+   mocked transport, so anything not listed as verified above rests on the Microsoft Graph v1.0
+   reference rather than observed behaviour.
+2. **There is no released build.** Clone and build it yourself; see
+   [Build, test and run](#build-test-and-run).
+3. **Automatic setup needs a bootstrap client ID.** This repository ships none, deliberately: a
+   private identifier committed to source control is a supply-chain problem. Supply your own
+   under *Advanced*, or use an existing app registration.
+4. **Artifacts are unsigned and un-notarized.** No signing credentials exist here, so a
+   self-built application will be blocked by Gatekeeper on macOS until you allow it.
+5. **Publisher metadata is a placeholder**, including the privacy policy URL shown on the
    consent screen.
-5. **Site search is not exhaustive.** `GET /sites?search=` returns what the search index exposes
+6. **Site search is not exhaustive.** `GET /sites?search=` returns what the search index exposes
    to the signed-in user. The UI says so and offers URL pasting for exact resolution.
-6. **Consent type cannot always be determined.** A token proves consent exists but not whether
+7. **Consent type cannot always be determined.** A token proves consent exists but not whether
    an administrator granted it tenant-wide. This is reported as unknown rather than guessed.
-7. **Telemetry is not implemented.** The opt-in setting exists; no pipeline does.
-8. **`Sites.Selected` is documented, not fully implemented.** Graphical site assignment is not
+8. **Telemetry is not implemented.** The opt-in setting exists; no pipeline does.
+9. **`Sites.Selected` is documented, not fully implemented.** Graphical site assignment is not
    provided.
-9. **Embed links** are OneDrive-personal only and are not offered in the UI.
-10. **Stale links are not tracked.** A manifest records a link at a point in time; it cannot know
+10. **Embed links** are OneDrive-personal only and are not offered in the UI.
+11. **Stale links are not tracked.** A manifest records a link at a point in time; it cannot know
     an administrator later revoked it.
 
 ## Packaging
