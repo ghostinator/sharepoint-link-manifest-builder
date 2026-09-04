@@ -1,4 +1,6 @@
 # SharePoint Link Manifest Builder
+<img width="1282" height="841" alt="CleanShot 2026-09-04 at 17 04 13" src="https://github.com/user-attachments/assets/0e9a44f5-2057-467f-a205-4a94342694e4" />
+<p></p>
 
 A cross-platform desktop application that builds explicit, reliable manifests of SharePoint and
 OneDrive file links, so Microsoft Copilot or another authorized AI system can be given a precise
@@ -90,10 +92,15 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the decision records in
 [docs/adr](docs/adr).
 
 ## Screenshots
+<img width="1282" height="841" alt="CleanShot 2026-09-04 at 17 04 13" src="https://github.com/user-attachments/assets/0e9a44f5-2057-467f-a205-4a94342694e4" />
+<img width="1325" height="1266" alt="CleanShot 2026-09-04 at 17 26 05" src="https://github.com/user-attachments/assets/6c55375c-b402-45f7-b891-cb3023f5e5b0" />
+<img width="1276" height="1021" alt="CleanShot 2026-09-04 at 17 15 22" src="https://github.com/user-attachments/assets/d4664726-588f-48e9-af4c-2b05765bd850" />
+<img width="1276" height="1017" alt="CleanShot 2026-09-04 at 17 19 27" src="https://github.com/user-attachments/assets/c370d456-2eaa-433e-bf6c-f9d8a80a0b76" />
+<img width="1278" height="1022" alt="CleanShot 2026-09-04 at 17 22 40" src="https://github.com/user-attachments/assets/a57c84f1-869e-4764-b924-619311d3741c" />
+<img width="1270" height="1294" alt="CleanShot 2026-09-04 at 17 23 34" src="https://github.com/user-attachments/assets/fb7b36e7-8f4f-4867-99f8-6ef08a9f3ee8" />
+<img width="1381" height="1501" alt="CleanShot 2026-09-04 at 17 33 49" src="https://github.com/user-attachments/assets/61d8e180-103b-4754-bc74-d1140afb1e05" />
+<img width="1190" height="783" alt="CleanShot 2026-09-04 at 17 36 08" src="https://github.com/user-attachments/assets/9511c0a3-83af-4fa8-865b-804aff17da39" />
 
-Not yet included. A screenshot of this application necessarily shows a real tenant, so they
-must be captured against a dedicated test tenant with synthetic content. See
-[docs/screenshots/README.md](docs/screenshots/README.md).
 
 ## Prerequisites
 
