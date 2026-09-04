@@ -1,4 +1,5 @@
 # SharePoint Link Manifest Builder
+<img width="1268" height="859" alt="image" src="https://github.com/user-attachments/assets/930efa1c-0f90-4fde-9123-865a84af43f7" />
 
 A cross-platform desktop application that builds explicit, reliable manifests of SharePoint and
 OneDrive file links, so Microsoft Copilot or another authorized AI system can be given a precise
