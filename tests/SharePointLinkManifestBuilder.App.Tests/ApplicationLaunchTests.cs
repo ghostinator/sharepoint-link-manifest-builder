@@ -120,8 +120,13 @@ public sealed class ApplicationLaunchTests : IDisposable
         window.Show();
 
         Assert.NotNull(window.DataContext);
-        Assert.Equal(12, viewModel.Pages.Count);
+        Assert.Equal(10, viewModel.Pages.Count);
         Assert.Contains(viewModel.Pages, p => p.NavigationKey == "setup");
+
+        // The resource browsers are steps inside the job page, not destinations. Listing them
+        // here again would restore the detour this navigation was changed to remove.
+        Assert.DoesNotContain(viewModel.Pages, p => p.NavigationKey == "sharepoint");
+        Assert.DoesNotContain(viewModel.Pages, p => p.NavigationKey == "onedrive");
         Assert.False(string.IsNullOrWhiteSpace(window.Title));
     }
 
@@ -160,7 +165,7 @@ public sealed class ApplicationLaunchTests : IDisposable
 
         foreach (var key in new[]
         {
-            "home", "job", "sharepoint", "onedrive", "profiles", "history",
+            "home", "job", "profiles", "history",
             "setup", "permissions", "settings", "diagnostics", "help", "about",
         })
         {

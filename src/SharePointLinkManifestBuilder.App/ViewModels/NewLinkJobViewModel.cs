@@ -34,8 +34,20 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
     private PauseToken? _pauseToken;
     private JobPreview? _preview;
 
-    /// <summary>How many steps the job page has. The step tabs are numbered 1 to this.</summary>
+    /// <summary>How many numbered steps the job page has.</summary>
     public const int StepCount = 6;
+
+    /// <summary>
+    /// The Targets step. Browsing happens inside it rather than as tabs of its own, so choosing
+    /// locations never moves the selected step and the numbered strip stays exactly six wide.
+    /// </summary>
+    private const int TargetsTab = 0;
+
+    /// <summary>The SharePoint browser, hosted inside this page rather than beside it.</summary>
+    public SharePointBrowserViewModel SharePointBrowser { get; }
+
+    /// <summary>The OneDrive browser, hosted inside this page rather than beside it.</summary>
+    public OneDriveBrowserViewModel OneDriveBrowser { get; }
 
     /// <summary>The tab currently shown: 0 targets, 1 link, 2 manifest, 3 filters, 4 preview, 5 results.</summary>
     [ObservableProperty]
@@ -45,7 +57,22 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
     private int _selectedTabIndex;
 
     /// <summary>A human-readable position, for the label between the Back and Next buttons.</summary>
-    public string StepPosition => $"Step {SelectedTabIndex + 1} of {StepCount}";
+    public string StepPosition => IsBrowsing
+        ? $"Step 1 of {StepCount} — choosing locations"
+        : $"Step {SelectedTabIndex + 1} of {StepCount}";
+
+    /// <summary>True while the SharePoint browse tab should be shown.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StepPosition))]
+    private bool _isBrowsingSharePoint;
+
+    /// <summary>True while the OneDrive browse tab should be shown.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StepPosition))]
+    private bool _isBrowsingOneDrive;
+
+    /// <summary>True when either browse tab is showing, so the page can offer a way back.</summary>
+    public bool IsBrowsing => IsBrowsingSharePoint || IsBrowsingOneDrive;
 
     /// <summary>Requested link permission.</summary>
     [ObservableProperty]
@@ -213,9 +240,16 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
         IProductMetadataProvider productMetadata,
         IClipboardService clipboard,
         ISystemBrowser browser,
+        SharePointBrowserViewModel sharePointBrowser,
+        OneDriveBrowserViewModel oneDriveBrowser,
         ILogger<NewLinkJobViewModel> logger)
         : base("New Link Job", "job")
     {
+        SharePointBrowser = sharePointBrowser
+            ?? throw new ArgumentNullException(nameof(sharePointBrowser));
+
+        OneDriveBrowser = oneDriveBrowser ?? throw new ArgumentNullException(nameof(oneDriveBrowser));
+
         _runner = runner ?? throw new ArgumentNullException(nameof(runner));
         _connection = connection ?? throw new ArgumentNullException(nameof(connection));
         _draft = draft ?? throw new ArgumentNullException(nameof(draft));
@@ -885,4 +919,66 @@ public sealed partial class NewLinkJobViewModel : PageViewModelBase, IDisposable
     private void NextStep() => SelectedTabIndex++;
 
     private bool CanGoToNextStep() => SelectedTabIndex < StepCount - 1;
+
+    /// <summary>
+    /// Leaving the Targets step puts the browsers away, because that is where they live. Without
+    /// this, stepping to Link and back would return to a browser rather than the target list the
+    /// user just finished building.
+    /// </summary>
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        if (value != TargetsTab && IsBrowsing)
+        {
+            CloseBrowsers();
+        }
+    }
+
+    /// <summary>Opens the SharePoint browser inside the Targets step.</summary>
+    [RelayCommand]
+    private async Task BrowseSharePointAsync(CancellationToken cancellationToken)
+    {
+        SelectedTabIndex = TargetsTab;
+        IsBrowsingOneDrive = false;
+        IsBrowsingSharePoint = true;
+        OnPropertyChanged(nameof(IsBrowsing));
+
+        // The browser used to be a page, so it loaded when navigated to. Hosting it here means
+        // this call is what replaces that.
+        await SharePointBrowser.OnNavigatedToAsync(cancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Opens the OneDrive browser inside the Targets step.</summary>
+    [RelayCommand]
+    private async Task BrowseOneDriveAsync(CancellationToken cancellationToken)
+    {
+        SelectedTabIndex = TargetsTab;
+        IsBrowsingSharePoint = false;
+        IsBrowsingOneDrive = true;
+        OnPropertyChanged(nameof(IsBrowsing));
+
+        await OneDriveBrowser.OnNavigatedToAsync(cancellationToken).ConfigureAwait(true);
+    }
+
+    private void CloseBrowsers()
+    {
+        IsBrowsingSharePoint = false;
+        IsBrowsingOneDrive = false;
+        OnPropertyChanged(nameof(IsBrowsing));
+    }
+
+    /// <summary>
+    /// Returns to the targets step and puts the browse tabs away.
+    /// <para>
+    /// Both are closed rather than only the one being left, so the tab strip returns to the six
+    /// numbered steps and does not accumulate browse tabs from earlier in the session. The
+    /// selections themselves live in the shared draft and are unaffected.
+    /// </para>
+    /// </summary>
+    [RelayCommand]
+    private void ReturnToTargets()
+    {
+        CloseBrowsers();
+        SelectedTabIndex = TargetsTab;
+        RefreshTargets();
+    }
 }

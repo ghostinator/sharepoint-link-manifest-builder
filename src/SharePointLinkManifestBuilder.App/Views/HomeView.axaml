@@ -101,12 +101,7 @@
         <Button Content="Create New Link Job" Classes="Primary" Margin="0,0,8,8"
                 Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
                 CommandParameter="job" />
-        <Button Content="Browse SharePoint" Margin="0,0,8,8"
-                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
-                CommandParameter="sharepoint" />
-        <Button Content="Browse OneDrive" Margin="0,0,8,8"
-                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
-                CommandParameter="onedrive" />
+
         <Button Content="Job History" Margin="0,0,8,8"
                 Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
                 CommandParameter="history" />

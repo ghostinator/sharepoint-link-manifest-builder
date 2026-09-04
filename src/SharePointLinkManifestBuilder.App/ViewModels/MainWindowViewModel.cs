@@ -26,8 +26,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel(
         HomeViewModel home,
         NewLinkJobViewModel job,
-        SharePointBrowserViewModel sharePoint,
-        OneDriveBrowserViewModel oneDrive,
         SavedProfilesViewModel profiles,
         JobHistoryViewModel history,
         TenantSetupViewModel setup,
@@ -44,9 +42,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _productMetadata = productMetadata ?? throw new ArgumentNullException(nameof(productMetadata));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
+        // The two resource browsers are deliberately absent: they are steps inside the job page
+        // now, not destinations of their own. Choosing what to process is part of building a
+        // job, and having them in the sidebar made it a detour with no way back.
         Pages =
         [
-            home, job, sharePoint, oneDrive, profiles, history,
+            home, job, profiles, history,
             setup, permissions, settings, diagnostics, help, about,
         ];
 

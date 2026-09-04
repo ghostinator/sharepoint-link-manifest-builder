@@ -36,6 +36,16 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The browsers' action bar ran into the tree above it.** The bar was a horizontal `StackPanel`,
+  which overflows rather than wrapping, and it sat in a `DockPanel`, which does not clip a fill
+  child that measures taller than its slot. Both were survivable when each browser had a whole
+  window; neither survived being hosted inside a tab. SharePoint was worse than OneDrive purely
+  because it has one more button. The bar now wraps, the tree sits in a star row that cannot
+  overflow into it, and the 24px page margin the browsers carried from their standalone days is
+  gone — it was being applied on top of the job page's own padding and narrowing the tree for
+  nothing. The SharePoint side panel also shrinks before the tree does, rather than holding a
+  fixed 340px.
+
 - **A Conditional Access device requirement was reported as missing administrator approval.**
   `AADSTS50097` ("Device authentication is required") arrives from the consent endpoint as
   `interaction_required`, which the generic mapping read as "an administrator still needs to
@@ -49,6 +59,15 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   plainly when the step turned out to be unnecessary.
 
 ### Changed
+
+- **The resource browsers are steps of a job rather than separate pages.** SharePoint Sites and
+  OneDrive have left the sidebar and open as tabs inside New Link Job, from the Targets step,
+  each with a **Done — back to targets** action. Selecting what to process is part of building a
+  job, and having the browsers as destinations of their own made it a detour with no signposted
+  way back — the Targets step said "add locations from the SharePoint Sites or OneDrive pages"
+  and then offered no route home. The browsers open inside the Targets step, under a bar that
+  appears below the numbered strip only while browsing, so the strip stays exactly six wide and
+  choosing locations never moves the selected step.
 
 - **Verification states a single PASS or FAIL.** The verdict came from reading three separate
   lists and inferring one, and "Not checked" in particular read as a failure when it means the

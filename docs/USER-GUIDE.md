@@ -33,9 +33,14 @@ app registration** and ask an administrator for the client ID. Everything else w
 
 ## Selecting what to process
 
+Choosing locations happens inside a job rather than on separate pages. Open **New Link Job**,
+stay on **1. Targets**, and use **Browse SharePoint** or **Browse OneDrive**. Each opens as a
+step of the job, and **Done — back to targets** returns you to the target list with your
+selections added.
+
 ### SharePoint
 
-Open **SharePoint Sites**. You can:
+Choose **Browse SharePoint** from the Targets step. You can:
 
 - **Search** by name. Search shows what Microsoft 365 returns for your account; it is not
   necessarily every site in the organization.
@@ -48,7 +53,7 @@ want to process, then choose **Add selected as targets**.
 
 ### OneDrive
 
-Open **OneDrive**.
+Choose **Browse OneDrive** from the Targets step.
 
 - **Open My OneDrive** for your own files.
 - **Open another user's OneDrive** under the expander. Search for the person, select them, and
