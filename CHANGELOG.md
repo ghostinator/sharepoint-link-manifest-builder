@@ -36,6 +36,16 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Opening the "another user's OneDrive" panel pushed the tree off the window with no way to
+  scroll.** The browsers had two `Auto` rows above their star row, so the controls could grow
+  without limit and take the tree's space with them. With the expander open the tree collapsed to
+  its action bar, and the top-aligned *Selected item* card spilled out of a row that no longer
+  had room for it — `Grid` does not clip, so that read as misalignment rather than as the
+  overflow it was. Each browser is now one scroll region covering the header, the controls, the
+  tree and the details panel, with the action bar pinned below it so the primary action is
+  reachable without scrolling back to find it. Applied to the SharePoint browser too, which had
+  the identical structure.
+
 - **The browsers' action bar ran into the tree above it.** The bar was a horizontal `StackPanel`,
   which overflows rather than wrapping, and it sat in a `DockPanel`, which does not clip a fill
   child that measures taller than its slot. Both were survivable when each browser had a whole
@@ -59,6 +69,21 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   plainly when the step turned out to be unnecessary.
 
 ### Changed
+
+- **Opening a OneDrive now collapses the others and expands the new one.** Each drive is a full
+  folder tree, so several expanded at once buried the drive that had just been asked for beneath
+  however much of the previous ones happened to be showing. Collapsing discards nothing: loaded
+  children stay loaded, so re-expanding costs no further Graph calls.
+
+### Added
+
+- **A drive cannot be opened twice, and open drives can be closed.** Opening one that is already
+  open reveals it instead of adding a second copy — two subtrees for one drive means two sets of
+  checkboxes disagreeing about the same files. Identity is the drive rather than the person
+  searched for, so two directory entries resolving to one drive also open once. **Close** on a
+  drive row closes that drive; **Close other users' drives** closes all but your own. Neither
+  removes targets already added from them: those were an explicit choice, and are removed on the
+  Targets step.
 
 - **The resource browsers are steps of a job rather than separate pages.** SharePoint Sites and
   OneDrive have left the sidebar and open as tabs inside New Link Job, from the Targets step,

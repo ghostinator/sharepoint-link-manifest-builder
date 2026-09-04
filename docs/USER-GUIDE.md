@@ -59,6 +59,12 @@ Choose **Browse OneDrive** from the Targets step.
 - **Open another user's OneDrive** under the expander. Search for the person, select them, and
   open their drive.
 
+Opening a drive collapses the others and expands the new one, so the drive you just asked for is
+the one on screen. Opening a drive that is already open reveals it rather than adding a second
+copy. **Close** on a drive row closes that one; **Close other users' drives** closes all but your
+own. Neither removes targets you have already added — those are listed on the Targets step and
+are removed there.
+
 Finding a user does **not** mean their OneDrive can be opened. It may not exist yet, or your
 permissions may not reach it. The application tells you which of those it is, and never creates
 a OneDrive on someone's behalf.
