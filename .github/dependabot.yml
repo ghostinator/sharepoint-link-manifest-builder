@@ -23,6 +23,21 @@ updates:
       testing:
         patterns: ["xunit*", "Microsoft.NET.Test.Sdk", "NSubstitute", "coverlet.*"]
 
+    ignore:
+      # xunit.v3 v4 cannot be taken while the headless UI tests exist. Avalonia.Headless.XUnit
+      # pins xunit.v3.extensibility.core to 3.2.2 and its AvaloniaFactDiscoverer calls
+      # TestIntrospectionHelper.GetTestCaseDetails with a signature v4 removed, so every
+      # [AvaloniaFact] fails at discovery with MissingMethodException while the other 422 tests
+      # pass. Avalonia 12.1.2 is the newest release and still pins 3.2.2, so this is not
+      # something a version bump on our side can resolve.
+      #
+      # Remove this entry once Avalonia ships a build referencing xunit.v3 4.x. Minor and patch
+      # updates within 3.x are deliberately still offered.
+      - dependency-name: "xunit.v3"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "xunit.runner.visualstudio"
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
