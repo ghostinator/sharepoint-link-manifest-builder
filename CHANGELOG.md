@@ -7,6 +7,10 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.1] - 2026-09-05
+
 ### Fixed
 
 - **A cancelled job reported zeros for everything it had already done.** Cancelling makes every
@@ -279,5 +283,6 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Telemetry is not implemented; the opt-in setting exists but no pipeline does.
 - `Sites.Selected` is documented but graphical site assignment is not implemented.
 
-[Unreleased]: https://github.com/ghostinator/sharepoint-link-manifest-builder/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ghostinator/sharepoint-link-manifest-builder/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/ghostinator/sharepoint-link-manifest-builder/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ghostinator/sharepoint-link-manifest-builder/releases/tag/v0.1.0

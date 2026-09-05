@@ -121,7 +121,7 @@ shasum -a 256 -c SHA256SUMS.txt  # macOS
 ```
 
 ```powershell
-Get-FileHash .\SharePointLinkManifestBuilder-0.1.0-win-x64.zip -Algorithm SHA256
+Get-FileHash .\SharePointLinkManifestBuilder-<version>-win-x64.zip -Algorithm SHA256
 ```
 
 Because artifacts are unsigned, **the checksum is the only integrity check available**. Compare
