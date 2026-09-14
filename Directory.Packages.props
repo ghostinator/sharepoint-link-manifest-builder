@@ -3,7 +3,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AvaloniaVersion>12.1.2</AvaloniaVersion>
-    <MsalVersion>4.88.0</MsalVersion>
+    <MsalVersion>4.89.0</MsalVersion>
     <ExtensionsVersion>10.0.11</ExtensionsVersion>
   </PropertyGroup>
 
